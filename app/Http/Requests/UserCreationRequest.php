@@ -33,6 +33,8 @@ class UserCreationRequest extends FormRequest
             'jobTitle' => 'required',
             'email' => 'required',
             'twoFactor' => 'required',
+            'solId' => 'required',
+            'region' => 'required'
         ];
     }
 }

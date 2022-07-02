@@ -12,6 +12,7 @@ use App\Models\BulkAccountOpen;
 use App\Models\BulkCorporateAccountUpload;
 use App\Models\BulkCustomerUpdateUpload;
 use App\Models\CorporateAccountCreationRequest;
+use App\Models\SolRegion;
 use App\Models\SystemConfiguration;
 use App\RunningProcess;
 use App\Upload;
@@ -830,115 +831,28 @@ function cacheQuery($sql, $timeout = 60) {
 }
 
 
-/**
- * @param $accountNumber
- * @param $phoneNumber
- * @param $email
- * @param string $showBal
- * @param string $maskAcct
- * @param string $alertOption
- * @param string $statusFlag
- * @param $staffId
- */
-function storeAlertDetails($accountNumber, $phoneNumber, $email, string $showBal, string $maskAcct, string $alertOption, string $statusFlag, $staffId, $batchNumber): void
+function getSolRegions(): \Illuminate\Database\Eloquent\Collection
 {
-    Alert::create([
-        'account_number' => $accountNumber, 'phone_number' => $phoneNumber, 'email' => $email, 'show_balance' => $showBal,
-        'mask_account_number' => $maskAcct, 'alert_option' => $alertOption, 'status_flag' => $statusFlag,'batch_number' => $batchNumber,
-        'processed_by' => $staffId, 'approved_by' => $staffId
-    ]);
+    return SolRegion::all();
 }
 
-/**
- * @param $accountNumber
- * @param $phoneNumber
- * @param $email
- * @param string $showBal
- * @param string $maskAcct
- * @param string $alertOption
- * @param string $statusFlag
- * @param $staffId
- */
-function storeBvnDetails($accountNumber, $bvn, $customerId, $bvnDate, $corporateCustomerId, $retailsCustomerid, $solId, $staffId, $accountType, $batchNumber): void
+function getSolByRegions($region): \Illuminate\Database\Eloquent\Collection
 {
-    \App\Models\BvnLink::create([
-        'account_number' => $accountNumber, 'bvn' => $bvn, 'customer_id' => $customerId, 'retail_customer_id' => $retailsCustomerid,
-        'corporate_customer_id' => $corporateCustomerId, 'bvn_date' => $bvnDate, 'audit_sol' => $solId,'batch_number' => $batchNumber,
-        'processed_by' => $staffId, 'approved_by' => $staffId, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now(), 'account_type' => $accountType
-    ]);
+    return SolRegion::where('region', $region)
+        ->select('SolId', 'EcName', 'EcAddress')
+        ->get();
 }
 
-/**
- * @param Request $request
- * @param array $response
- * @param $staffId
- * @return array
- */
-function ProcessAlert(AlertUpload $request, $staffId): string
+function getRegions(): \Illuminate\Database\Eloquent\Collection
 {
-    Log::info(json_encode($request));
-    $showBal = 'N';
-    if (!empty($request->showBalance))
-        $showBal = $request->showBalance;
-    $accountNumber = $request->accountNumber;
-    $accountDetails = getAccountDetails($accountNumber);
-    if ($accountDetails == null) {
-        return "Invalid Account Number";
-    }
-    $phoneNumber = $request->phoneNumber;
-    $email = $request->email;
-    $alertOption = "";
-    $statusFlag = 'Y';
-    $maskAcct = 'N';
-    if (!empty($email) && !empty($phoneNumber)) {
-        $alertOption = 'BOTH';
-    } elseif (!empty($email) && empty($phoneNumber)) {
-        $alertOption = 'EMAIL';
-    } elseif (empty($email) && !empty($phoneNumber)) {
-        $alertOption = 'SMS';
-    }
-    $acid = $accountDetails->acid;
-    $ipAddress = getClientIp();
-    $functionCode = 'A';
-    $result = getRelatedPartiesDetails($accountNumber);
-    Log::info($result);
-    foreach ($result as $det) {
-        $cifId = $det->nma_key_id;
-        Log::info($cifId);
-        Log::info(checkPhone($phoneNumber, $cifId));
-        if (!checkPhone($phoneNumber, $cifId)) {
-            //return "The Phone Number is not that of a Signatory on the account, check and try again";
-        }
+    return SolRegion::select('region')
+        ->distinct()->get();
+}
 
-        if (!checkEmail($email, $cifId)) {
-            //return "The Email is not that of a Signatory on the account, check and try again";
-        }
-    }
-    Log::info(checkPhoneAlert($phoneNumber, $accountNumber));
-    if (checkPhoneAlert($phoneNumber, $accountNumber)) {
-        return "The Phone Number already maintained for this account";
-    }
-
-    if (checkEmailAlert($email, $accountNumber)) {
-        return "The Email Number already maintained for this account";
-    }
-
-    //Check if alert has been setup on the account before
-    if (checkAlertCount($accountNumber) >= 1) {
-        $functionCode = "U";
-        storeAlertOptions($accountNumber, $phoneNumber, $email);
-        storeAlertAudit($accountNumber, $phoneNumber, $email, $functionCode, $staffId, $ipAddress);
-    } else {
-        storeAlertSetup($showBal, $accountNumber, $acid, $statusFlag, $maskAcct, $alertOption);
-        storeAlertOptions($accountNumber, $phoneNumber, $email);
-        storeAlertAudit($accountNumber, $phoneNumber, $email, $functionCode, $staffId, $ipAddress);
-    }
-    $batchNumber = $request->batchNumber;
-
-    storeAlertDetails($accountNumber, $phoneNumber, $email, $showBal, $maskAcct, $alertOption, $statusFlag, $staffId, $batchNumber);
-    return "";
-
-
+function getSols(): \Illuminate\Database\Eloquent\Collection
+{
+    return SolRegion::select('SolId', 'EcName', 'EcAddress')
+        ->distinct()->get();
 }
 
 

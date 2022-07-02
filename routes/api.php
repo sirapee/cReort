@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\API\InquiryController;
+use App\Http\Controllers\API\ReconciliationController;
 use App\Http\Controllers\API\SessionController;
 use App\Http\Controllers\API\SettlementController;
 use App\Http\Controllers\API\UserManagementController;
@@ -58,11 +60,25 @@ Route::group(['prefix' => 'v1/'], function () {
         Route::get('/addExtras', [UserManagementController::class, 'addExtras'] );
         Route::get('/pending', [UserManagementController::class, 'pendingAuthorization'] );
         Route::get('/export', [UserManagementController::class, 'usersDetailsDownload'] );
+        Route::get('/ad-details/{staffId}', [UserManagementController::class, 'adDetails'] );
 
 
-        Route::delete('/delete', [UserManagementController::class, 'destroy'] );
-        Route::get('/restore', [UserManagementController::class, 'restore'] );
+        Route::delete('/{userId}', [UserManagementController::class, 'destroy'] );
+        Route::get('/restore/{userId}', [UserManagementController::class, 'restore'] );
 
+
+    });
+
+    Route::group(array('prefix' => 'inquiries'), function () {
+        Route::get('/sols', [InquiryController::class, 'sols'] );
+        Route::get('/regions', [InquiryController::class, 'regions'] );
+        Route::get('/regions/{region}/sols', [InquiryController::class, 'solsByRegion'] );
+
+
+    });
+
+    Route::group(array('prefix' => 'recon'), function () {
+        Route::post('/initiate', [ReconciliationController::class, 'initiate'] );
 
     });
 });

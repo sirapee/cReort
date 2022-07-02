@@ -15,6 +15,7 @@ use App\Models\UserManagementAudit;
 use App\Services\Interfaces\IUserManagementService;
 use Carbon\Carbon;
 use Cartalyst\Sentinel\Laravel\Facades\Activation;
+use Faker\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -34,7 +35,7 @@ class UserManagementService implements IUserManagementService
     {
         //Log::info(encrypt("P@sswo0rd"));
         // Grab all the users
-        $users = User::where('new_user', 'N');
+        $users = User::where('new_user', 'N')->get();
         // Do we want to include the deleted users?
         if ($request->get('withTrashed')) {
             $users = User::withTrashed()->get();
@@ -167,39 +168,60 @@ class UserManagementService implements IUserManagementService
 
     public function getDetails($id): UserManagementResponse
     {
-
-        //try {
-        if ($search = Adldap::search()->where('employeeid', '=', $id)->firstOrFail()) {
-            $names = explode(' ', $search->displayname[0]);
-            if ($names[1] == '') {
-                $names[1] = $names[2];
+        try {
+            if(env("APP_ENVIRONMENT") !== "Development" && env("APP_ENVIRONMENT") !== "Test"){
+                if ($search = Adldap::search()->where('employeeid', '=', $id)->firstOrFail()) {
+                    $names = explode(' ', $search->displayname[0]);
+                    if ($names[1] == '') {
+                        $names[1] = $names[2];
+                    }
+                    $details = [
+                        'department' => $search->department[0],
+                        'username' => strtolower($search->samaccountname[0]),
+                        'email' => strtolower($search->mail[0]),
+                        'first_name' => $names[0],
+                        'last_name' => $names[1],
+                        'job_title' => $search->title[0]
+                    ];
+                    $this->response->isSuccessful = true;
+                    $this->response->data = $details;
+                    $this->response->responseCode = "000";
+                    $this->response->responseMessage = "User Creation Successful";
+                    return $this->response;
+                }
+                $this->response->responseMessage = "Could not Get User Details";
+                return $this->response;
             }
+
+
+
+            $faker = Factory::create();
+            $firstName = $faker->firstName;
+            $lastName = $faker->lastName;
+            $username = strtolower($firstName .'.'.$lastName);
+            $email = $username.'@.tys.com';
+            $department = $faker->randomElement(['System Access Control', 'E-Banking Control', 'Regional Control', 'Business Services']);
+            $jobTitle = $department . ' Officer';
             $details = [
-                'department' => $search->department[0],
-                'username' => strtolower($search->samaccountname[0]),
-                'email' => strtolower($search->mail[0]),
-                'first_name' => $names[0],
-                'last_name' => $names[1],
-                'job_title' => $search->title[0]
+                'department' => $department,
+                'username' => $username,
+                'email' => $email,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'job_title' => $jobTitle
             ];
             $this->response->isSuccessful = true;
             $this->response->data = $details;
             $this->response->responseCode = "000";
             $this->response->responseMessage = "User Creation Successful";
-            $response['Details'] = $details;
             return $this->response;
-        }
 
-        $this->response->responseMessage = "Could not Get User Details";
-
-        return $this->response;
-
-        /*} catch (\Exception $e) {
+        } catch (\Exception $e) {
             Log::info($e->getMessage());
-            $response['ResponseCode'] = '4';
-            $response['Message'] = $e->getMessage();
-            return response()->json($response, 500);
-        }*/
+            $this->response->responseCode = "907";
+            $this->response->responseMessage = $e->getMessage();
+            return $this->response;
+        }/**/
 
     }
 
@@ -303,7 +325,7 @@ class UserManagementService implements IUserManagementService
         DB::beginTransaction();
         try{
             $approveOrReject =  $request->approveOrReject;
-            $userId = $request->userId;
+            $userId = trim($request->userId);
             $auditDetails = UserManagementAudit::where('user_id', $userId)
                 ->whereNull('authorizer')->first();
             if(empty($auditDetails)){
@@ -375,6 +397,88 @@ class UserManagementService implements IUserManagementService
         }
     }
 
+    public function deleteUser($userId): UserManagementResponse
+    {
+
+        $staffId = getLoggedInStaffId();
+        try{
+            $user = User::findOrFail($userId);
+
+            if (UserManagementAudit::where('user_id', $userId)
+                ->whereNull('authorizer')->exists())
+            {
+                $this->response->responseCode = "119";
+                $this->response->responseMessage = ' Verification Pending for ' . $user->first_name .' !!!';
+                return $this->response;
+            }
+
+            UserManagementAudit::insert([
+                'function_code' => 'D',
+                'user_id' => $userId,
+                'modified_field_data' => 'Delete User',
+                'inputter' => $staffId,
+                'created_at' => Carbon::now()
+            ]);
+            $users = User::All();
+            $subject = 'User Management Delete';
+            $details = $user->emp_id .'|' . $user->first_name .' '.$user->last_name. '|'. $user->role;
+            LogActivity::addToLog($subject,$details);
+            $this->response->isSuccessful = true;
+            $this->response->data = $users;
+            $this->response->responseCode = "000";
+            $this->response->responseMessage = "User Deletion Initiated Successful";
+            return $this->response;
+        }catch (\Exception $e){
+            $message = $e->getMessage();
+            Log::info($message);
+            $this->response->responseCode = "907";
+            $this->response->responseMessage = $message;
+            return $this->response;
+        }
+
+    }
+
+    public function restoreUser($userId): UserManagementResponse
+    {
+
+        $staffId = getLoggedInStaffId();
+        try{
+            $user = User::withTrashed()->findOrFail($userId);
+
+            if (UserManagementAudit::where('user_id', $userId)
+                ->whereNull('authorizer')->exists())
+            {
+                $this->response->responseCode = "119";
+                $this->response->responseMessage = ' Verification Pending for ' . $user->first_name .' !!!';
+                return $this->response;
+            }
+
+            UserManagementAudit::insert([
+                'function_code' => 'R',
+                'user_id' => $userId,
+                'modified_field_data' => 'Restore User',
+                'inputter' => $staffId,
+                'created_at' => Carbon::now()
+            ]);
+            $users = User::All();
+            $subject = 'User Management Delete';
+            $details = $user->emp_id .'|' . $user->first_name .' '.$user->last_name. '|'. $user->role;
+            LogActivity::addToLog($subject,$details);
+            $this->response->isSuccessful = true;
+            $this->response->data = $users;
+            $this->response->responseCode = "000";
+            $this->response->responseMessage = "User Restoration Initiated Successful";
+            return $this->response;
+        }catch (\Exception $e){
+            $message = $e->getMessage();
+            Log::info($message);
+            $this->response->responseCode = "907";
+            $this->response->responseMessage = $message;
+            return $this->response;
+        }
+
+    }
+
 
     private function saveProfileImage($image,$staffId){
         $data = $image; // replace with an image string in bytes
@@ -426,6 +530,7 @@ class UserManagementService implements IUserManagementService
         if(trim($functionCode) === "A"){
             //$user = DB::table('users')->where('id', $userId)->first();
             if($approveOrReject === "A"){
+                $this->activateUser($userId);
                 DB::table('users')
                     ->where('id', $userId)
                     ->update(['new_user' => 'N']);
@@ -435,7 +540,20 @@ class UserManagementService implements IUserManagementService
                     ->delete();
             }
 
-        }else{
+        }
+        elseif(trim($functionCode) === "D"){
+            //$user = DB::table('users')->where('id', $userId)->first();
+            if($approveOrReject === "A"){
+                User::where('id',$userId)->delete();
+            }
+        }
+        elseif(trim($functionCode) === "R"){
+            //$user = DB::table('users')->where('id', $userId)->first();
+            if($approveOrReject === "A"){
+                User::withTrashed()->where('id',$userId)->restore();
+            }
+        }
+        else{
             $userMod = DB::table('users_mod')->where('id', $userId)->first();
             if($approveOrReject === "A"){
                 DB::table('users')

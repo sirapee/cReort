@@ -97,6 +97,15 @@ class UserManagementController extends Controller
         return response()->json($response, 400);
     }
 
+    public function adDetails($id): \Illuminate\Http\JsonResponse
+    {
+        $response = $this->userService->getDetails($id);
+        if($response->isSuccessful){
+            return response()->json($response);
+        }
+        return response()->json($response, 400);
+    }
+
     public function permissionsDetails($slug): \Illuminate\Http\JsonResponse
     {
         $response = $this->userService->permissionsDetails($slug);
@@ -128,58 +137,22 @@ class UserManagementController extends Controller
 
 
 
-    public function destroy(Request $request)
+    public function destroy($userId): \Illuminate\Http\JsonResponse
     {
-        $response = [
-            'ResponseCode' => 3,
-            'Message' =>  'FAILURE',
-            'Users' => null,
-            'ErrorResponse' => null
-        ];
-        $userId = $request->UserId;
-        $staffId = getLoggedInStaffId();
-        try{
-            $user = User::findOrFail($userId);
-            $auditDetails = UserManagementAudit::where('user_id', $userId)
-                ->whereNull('authorizer')->first();
-            Log::info($auditDetails);
-            if ($auditDetails != '')
-            {
-                $response['ErrorResponse'] =  ' Verification Pending for ' . $user->first_name .' !!!';
-                return response()->json($response, 400);
-            }
-            //
-            $now = $this->nowdate();
-            $input = [
-                'deleted'=> 'Y',
-                'modified_by' => $request->StaffId,
-                'modified_date' => $now,
-            ];
-
-            User::where('id', $userId)
-                ->update($input);
-            $data = [
-                'function_code' => 'D',
-                'user_id' => $userId,
-                'modified_field_data' => 'Deleted',
-                'inputter' => $staffId,
-            ];
-            UserManagementAudit::insert($data);
-            $users = User::All();
-            $subject = 'User Management Delete';
-            $details = $user->emp_id .'|' . $user->first_name .' '.$user->last_name. '|'. $user->role;
-            LogActivity::addToLog($subject,$details);
-            $response['Message'] = "SUCCESS";
-            $response['ResponseCode'] = 0;
-            $response['Users'] = $users;
-            return response()->json($response, 200);
-        }catch (\Exception $e){
-            $message = $e->getMessage();
-            $response['ErrorResponse'] = $message;
-            $response['ResponseCode'] = 4;
-            return response()->json($response, 500);
+        $response = $this->userService->deleteUser($userId);
+        if($response->isSuccessful){
+            return response()->json($response);
         }
+        return response()->json($response, 400);
+    }
 
+    public function restore($userId): \Illuminate\Http\JsonResponse
+    {
+        $response = $this->userService->restoreUser($userId);
+        if($response->isSuccessful){
+            return response()->json($response);
+        }
+        return response()->json($response, 400);
     }
 
 
@@ -196,48 +169,6 @@ class UserManagementController extends Controller
         ];
         return response()->json($response, 200);
     }
-
-    /**
-     * Restore a deleted user.
-     *
-     * @param  int      $id
-     * @return Redirect
-     */
-    public function restore($id = null)
-    {
-        $id = decrypt($id);
-        if ($user = User::onlyTrashed()
-            ->where('id', $id)
-            ->restore()){
-            $now = $this->nowdate();
-            $input = [
-                'verified_by' => null,
-                'deleted'=> 'N',
-                'modified_by' => Sentinel::getUser()->username,
-                'modified_date' => $now,
-                'deleted_at' => null
-            ];
-
-            User::where('id', $id)
-                ->update($input);
-            $success = Lang::get('users/message.success.restored');
-            $subject = 'User Management Restore';
-            $details = $user->emp_id .'|' . $user->first_name .' '.$user->last_name. '|'. $user->role;
-            LogActivity::addToLog($subject,$details);
-            return redirect()
-                ->route('users')
-                ->with([
-                    'success' => $success,
-                ]);
-        }
-        return redirect()
-            ->route('users')
-            ->with([
-                'error' => 'Nothing to restore',
-            ]);
-
-    }
-
 
     public function verify(UserAuthorizationRequest $request): \Illuminate\Http\JsonResponse
     {

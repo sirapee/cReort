@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\Implementations\IReconciliationService;
+use App\Services\Implementations\ReconciliationService;
 use App\Services\Implementations\SessionService;
 use App\Services\Implementations\SettlementUploadService;
 use App\Services\Implementations\UserManagementService;
@@ -33,6 +35,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             IUserManagementService::class,
             UserManagementService::class,
+        );
+
+        $this->app->bind(
+            IReconciliationService::class,
+            ReconciliationService::class,
         );
     }
 

@@ -26,5 +26,9 @@ interface IUserManagementService
 
     public function pendingAuthorization(): UserManagementResponse;
 
+    public function deleteUser($userId): UserManagementResponse;
+
+    public function restoreUser($userId): UserManagementResponse;
+
     public function permissionsDetails($slug): UserManagementResponse;
 }

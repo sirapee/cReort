@@ -107,6 +107,8 @@ class MigrationCartalystSentinel extends Migration
             $table->string('emp_id')->nullable();
             $table->string('job_title')->nullable();
             $table->string('department')->nullable();
+            $table->string('sol_id')->nullable();
+            $table->string('region')->nullable();
             $table->char('new_user',1)->default('N');
             $table->char('two_factor',1)->default('N');
             $table->timestamp('email_verified_at')->nullable();
@@ -133,6 +135,8 @@ class MigrationCartalystSentinel extends Migration
             $table->string('emp_id')->nullable();
             $table->string('job_title')->nullable();
             $table->string('department')->nullable();
+            $table->string('sol_id')->nullable();
+            $table->string('region')->nullable();
             $table->char('new_user',1)->nullable();
             $table->char('two_factor',1)->nullable();
             $table->timestamp('email_verified_at')->nullable();

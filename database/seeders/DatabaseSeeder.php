@@ -33,7 +33,8 @@ class DatabaseSeeder extends Seeder
             'password'    => "cherub",
             'first_name'  => 'John',
             'last_name'   => 'Doe',
-            'emp_id' => 'UBSADMIN'
+            'emp_id' => 'UBSADMIN',
+            'sol_id' => '999'
         ));
         $admin2 = Sentinel::registerAndActivate(array(
             'email'       => 'admin2@admin.com',
@@ -41,7 +42,8 @@ class DatabaseSeeder extends Seeder
             'password'    => "cherub",
             'first_name'  => 'Jane',
             'last_name'   => 'Doe',
-            'emp_id' => 'UBSROOT'
+            'emp_id' => 'UBSROOT',
+            'sol_id' => '999'
         ));
 
         $adminRole = Sentinel::getRoleRepository()->createModel()->create([
