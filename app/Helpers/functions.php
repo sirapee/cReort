@@ -12,6 +12,7 @@ use App\Models\BulkAccountOpen;
 use App\Models\BulkCorporateAccountUpload;
 use App\Models\BulkCustomerUpdateUpload;
 use App\Models\CorporateAccountCreationRequest;
+use App\Models\ReconRequest;
 use App\Models\SolRegion;
 use App\Models\SystemConfiguration;
 use App\RunningProcess;
@@ -80,6 +81,20 @@ function getLoggedInUser(){
     //return auth()->user();
 }
 
+function getSolRegion(): array
+{
+    $region = '';
+    $solId = '';
+    $loggedIdUser = getLoggedInUser();
+    if($loggedIdUser->role === 'rco'){
+        $region = $loggedIdUser->region;
+    }
+    if($loggedIdUser->role === 'branch.user' || $loggedIdUser->role === 'user' ){
+        $solId = $loggedIdUser->sol_id;
+    }
+
+    return [$region, $solId];
+}
 
 
 function getLoggedInStaffId(){
@@ -836,6 +851,11 @@ function getSolRegions(): \Illuminate\Database\Eloquent\Collection
     return SolRegion::all();
 }
 
+function geRegionBySol($solId)
+{
+    return SolRegion::select('region')->where('SolId', $solId)->first();
+}
+
 function getSolByRegions($region): \Illuminate\Database\Eloquent\Collection
 {
     return SolRegion::where('region', $region)
@@ -855,6 +875,42 @@ function getSols(): \Illuminate\Database\Eloquent\Collection
         ->distinct()->get();
 }
 
+function getOriginalDetails($terminalId, $rrn, $stan, $pan): object|null
+{
+    return DB::table('all_recon_data')->where([
+        'TerminalIdPostilion' => $terminalId,
+        'Pan' => $pan,
+        'RetrievalReferenceNumberPostilion' => $rrn,
+        'StanPostilion' => $stan,
+        'MessageType' => '200'
+
+    ])->first();
+}
+
+function checkDuplicateRecon($coverage, $tranDate, $solId = '', $region = '' ): bool
+{
+    if(ReconRequest::whereDate('TranDate', '=', $tranDate)->where('coverage', 'bank')->exists()){
+        Log::info("Reconciliation already Initiated bank wide for $tranDate, Check the report ");
+        return true;
+    }
+    if($coverage === 'region'){
+        if(ReconRequest::whereDate('TranDate', '=', $tranDate)->where('coverage', 'region')->where('region', $region)->exists()){
+            Log::info("Reconciliation already Initiated for $tranDate and $region region, Check the report ");
+            return true;
+        }
+    }
+    if($coverage === 'sol'){
+        if(ReconRequest::whereDate('TranDate', '=', $tranDate)->where('coverage', 'region')->where('solId', $solId)->exists()){
+            Log::info("Reconciliation already Initiated for $tranDate and  $solId sol, Check the report ");
+            return true;
+        }
+    }
+    if(ReconRequest::whereDate('TranDate', '=', $tranDate)->where('coverage', $coverage)->exists()){
+        Log::info("Reconciliation already Initiated for $tranDate and $coverage, Check the report ");
+        return true;
+    }
+    return false;
+}
 
 
 ?>

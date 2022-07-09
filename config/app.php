@@ -131,6 +131,34 @@ return [
 
     'unlimited_user_license' => -1,
 
+    'admin_users' =>[
+        'admin','admin2','administrator'
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Trusted User list
+    |--------------------------------------------------------------------------
+    |
+    | All trusted users in the system to execute backend admin commands
+    |
+    */
+    'trusted_users' =>[
+        'admin','admin2','administrator'
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Company's Domain
+    |--------------------------------------------------------------------------
+    |
+    | This value is the name of your application. This value is used when the
+    | framework needs to place the application's name in a notification or
+    | any other location as required by the application or its packages.
+    */
+
+    'domain' => env('COMPANY_DOMAIN', 'dem.com'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

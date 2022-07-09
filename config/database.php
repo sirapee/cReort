@@ -92,6 +92,20 @@ return [
             // 'encrypt' => env('DB_ENCRYPT', 'yes'),
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
+        'sqlsrv_postilion' => [
+            'driver' => 'sqlsrv',
+            'url' => env('POSTILION_DATABASE_URL'),
+            'host' => env('POSTILION_DB_HOST', 'localhost'),
+            'port' => env('POSTILION_DB_PORT', '1433'),
+            'database' => env('POSTILION_DB_DATABASE', 'forge'),
+            'username' => env('POSTILION_DB_USERNAME', 'forge'),
+            'password' => env('POSTILION_DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            // 'encrypt' => env('DB_ENCRYPT', 'yes'),
+            // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
+        ],
 
     ],
 

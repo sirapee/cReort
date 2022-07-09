@@ -25,6 +25,7 @@ class UserManagementController extends Controller
      * @return void
      */
     public IUserManagementService $userService;
+    public $staffId;
     public function __construct(IUserManagementService $service)
     {
         $this->userService = $service;
@@ -67,6 +68,15 @@ class UserManagementController extends Controller
     public function details($id): \Illuminate\Http\JsonResponse
     {
         $response = $this->userService->getDetails($id);
+        if($response->isSuccessful){
+            return response()->json($response);
+        }
+        return response()->json($response, 400);
+    }
+
+    public function pendingDetails($id, $functionCode): \Illuminate\Http\JsonResponse
+    {
+        $response = $this->userService->authorizationUserDetails($id, $functionCode);
         if($response->isSuccessful){
             return response()->json($response);
         }
@@ -155,20 +165,6 @@ class UserManagementController extends Controller
         return response()->json($response, 400);
     }
 
-
-    public function deleted()
-    {
-        $users = User::onlyTrashed()->get();
-        $subject = 'User Management Deletes';
-        $details = 'Deleted users View';
-        LogActivity::addToLog($subject,$details);
-        $response = [
-            'ResponseCode' => 0,
-            'Message' =>  'Processing Completed',
-            'Details' => $users
-        ];
-        return response()->json($response, 200);
-    }
 
     public function verify(UserAuthorizationRequest $request): \Illuminate\Http\JsonResponse
     {

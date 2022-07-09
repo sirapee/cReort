@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services\Implementations;
+namespace App\Services\Interfaces;
 
 use App\Contracts\Responses\ReconciliationResponse;
 use App\Http\Requests\ReconciliationRequest;
 
-interface IReconciliationService
+interface ICReportService
 {
     public function initialiseRecon(ReconciliationRequest $request): ReconciliationResponse;
 }

@@ -16,6 +16,8 @@ interface IUserManagementService
 
     public function userDetails($id): UserManagementResponse;
 
+    public function authorizationUserDetails($id, $functionCode = 'A'): UserManagementResponse;
+
     public function getDetails($id): UserManagementResponse;
 
     public function updateUser(UpdateUserRequest $request, $id = null): UserManagementResponse;

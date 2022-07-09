@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
-use App\Services\Implementations\IReconciliationService;
+use App\Services\Implementations\CReportService;
 use App\Services\Implementations\ReconciliationService;
 use App\Services\Implementations\SessionService;
 use App\Services\Implementations\SettlementUploadService;
 use App\Services\Implementations\UserManagementService;
+use App\Services\Interfaces\ICReportService;
+use App\Services\Interfaces\IReconciliationService;
 use App\Services\Interfaces\ISessionService;
 use App\Services\Interfaces\ISettlementUploadService;
 use App\Services\Interfaces\IUserManagementService;
@@ -40,6 +42,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             IReconciliationService::class,
             ReconciliationService::class,
+        );
+
+        $this->app->bind(
+            ICReportService::class,
+            CReportService::class,
         );
     }
 

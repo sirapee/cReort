@@ -122,14 +122,11 @@ class MigrationCartalystSentinel extends Migration
         });
 
         Schema::create('users_mod', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->string('old_id')->nullable();
+            $table->id();
+            $table->string('user_id')->nullable();
             $table->string('email')->nullable();
             $table->string('username')->nullable();
-            $table->string('password')->nullable();
-
             $table->text('permissions')->nullable();
-            $table->timestamp('last_login')->nullable();
             $table->string('first_name')->nullable();
             $table->string('last_name')->nullable();
             $table->string('emp_id')->nullable();
@@ -137,9 +134,8 @@ class MigrationCartalystSentinel extends Migration
             $table->string('department')->nullable();
             $table->string('sol_id')->nullable();
             $table->string('region')->nullable();
-            $table->char('new_user',1)->nullable();
+            $table->string('role')->nullable();
             $table->char('two_factor',1)->nullable();
-            $table->timestamp('email_verified_at')->nullable();
             $table->string('created_by')->nullable();
             $table->softDeletes();
             $table->timestamps();

@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 Use Sentinel;
 use DB;
+use function PHPUnit\Framework\throwException;
 
 class UserManagementService implements IUserManagementService
 {
@@ -65,6 +66,7 @@ class UserManagementService implements IUserManagementService
             $request->merge(['emp_id' => $request->empId]);
             $request->merge(['last_name' => $request->lastName]);
             $request->merge(['job_title' => $request->jobTitle]);
+            $request->merge(['sol_id' => $request->solId]);
             $request->merge(['new_user' => 'Y']);
             $request->merge(['two_factor' => $request->twoFactor]);
             if(env("APP_ENVIRONMENT") !== "Development" && env("APP_ENVIRONMENT") !== "Test"){
@@ -166,6 +168,50 @@ class UserManagementService implements IUserManagementService
         }
     }
 
+    public function authorizationUserDetails($id, $functionCode = 'A'): UserManagementResponse
+    {
+        try{
+            if($functionCode ==='A'){
+                $user = User::findOrFail($id);
+            }
+            if($functionCode ==='U'){
+                $user = DB::table('users_mod')->where('user_id', $id);
+            }
+            if($functionCode ==='D'){
+                $user = User::findOrFail($id);
+                $user->deleted_at = Carbon::now();
+            }
+            if($functionCode ==='R'){
+                $user = User::findOrFail($id);
+                $user->deleted_at = Carbon::now();
+            }
+
+            // Redirect to user list if updating user wasn't existed
+            $sentinelUser = Sentinel::findById($id);
+            //dd(array_keys($sentinelUser->permissions));
+            $userRole =  $sentinelUser->roles()->first();
+            $dataArray = [
+                'user' => $user,
+                'userRole' => $userRole
+            ];
+            $data = (object)$dataArray;
+
+            $this->response->isSuccessful = true;
+            //$this->response->data->user = $user;
+            //$this->response->data->userRole = $userRole;
+            $this->response->data = $data;
+            $this->response->responseCode = "000";
+            $this->response->responseMessage = "Request Successful";
+            return $this->response;
+        }catch (\Exception $e){
+            $message = $e->getMessage();
+            Log::info($message);
+            $this->response->responseCode = "907";
+            $this->response->responseMessage = $message;
+            return $this->response;
+        }
+    }
+
     public function getDetails($id): UserManagementResponse
     {
         try {
@@ -232,63 +278,36 @@ class UserManagementService implements IUserManagementService
 
         try{
             $user = User::findOrFail($id);
-            $sentinelUser = Sentinel::findById($id);
             $auditDetails = UserManagementAudit::where('user_id', $id)
                 ->whereNull('authorizer')->first();
             Log::info($auditDetails);
-            if ($auditDetails != '')
+            if ($auditDetails !== '')
             {
-                $this->response->responseCode = "000";
+                $this->response->responseCode = "119";
                 $this->response->responseMessage = ' Verification Pending for ' . $user->first_name .' !!!';
                 return $this->response;
             }
-            $now = $this->nowdate();
-            $input = [
-                'emp_id' => $request['empId'],
-                'first_name' => $request['firstName'],
-                'last_name' => $request['lastName'],
-                'modified_by' => $staffId,
-                'modified_date' => $now,
-            ];
-            $user = User::where('id', $id)
-                ->get();
+            $request->merge(['first_name' => $request->firstName]);
+            $request->merge(['emp_id' => $request->empId]);
+            $request->merge(['last_name' => $request->lastName]);
+            $request->merge(['job_title' => $request->jobTitle]);
+            $request->merge(['two_factor' => $request->twoFactor]);
+            $request->merge(['user_id' => $id]);
+            $request->merge(['sol_id' => $request->solId]);
+            $request->merge(['sol_id' => $request->solId]);
+            $request->merge(['user_id' => $id]);
+            $request->merge(['role' => $request->role]);
+            $data = $request->except(['firstName', 'empId','lastName', 'jobTitle', 'twoFactor', 'permissions', 'solId']);
+            $this->response->data = $data;
+           //return $this->response;
+            DB::table('users_mod')->insert($data);
 
-            $roleFromUrl = $request->role;
-
-            $oldValues = $user;
-            $oldValues = collectionToArrayUsers($oldValues);
-
-
-            $newValues = $request->except(['StaffId', 'permissions']);
-            $arrayDifference = array_diff_assoc($oldValues[0],$newValues);
-            Log::info($arrayDifference);
-            $changedKeys = HelperFunctions::arrayKeysToString($arrayDifference);
-            $changedValues = HelperFunctions::arraysToValueString($arrayDifference);
-            $changedFields = $changedKeys . '|' . $changedValues;
-            DB::connection('sqlsrv')->statement("exec StoreUserUpdate  @id = $id");
-
-            User::where('id', $id)
-                ->update($input);
-            $role = Sentinel::findRoleBySlug($roleFromUrl);
-            $userRoles =  $sentinelUser->roles()->get();
-            //$userRole->users()->detach($sentinelUser);
-
-            foreach ($userRoles as $userRole){
-                $userRole->users()->detach($sentinelUser);
-            }
-            $role->users()->attach($sentinelUser);
-            //Attach permissions
-            if ($request->has('permissions')){
-                foreach ($request->permissions as $permission){
-                    $sentinelUser->addPermission($permission,true);
-                    $sentinelUser->save();
-                }
-            }
             $data = [
                 'function_code' => 'U',
                 'user_id' => $id,
-                'modified_field_data' => $changedFields,
+                'modified_field_data' => json_encode($request->all()),
                 'inputter' => $staffId,
+                'created_at' => Carbon::now()
             ];
             UserManagementAudit::insert($data);
             $subject = 'User Management Update';
@@ -305,7 +324,7 @@ class UserManagementService implements IUserManagementService
             $this->response->responseCode = "907";
             $this->response->responseMessage = $message;
             return $this->response;
-        }
+        }/**/
 
     }
 
@@ -328,7 +347,7 @@ class UserManagementService implements IUserManagementService
             $userId = trim($request->userId);
             $auditDetails = UserManagementAudit::where('user_id', $userId)
                 ->whereNull('authorizer')->first();
-            if(empty($auditDetails)){
+            if(!empty($auditDetails)){
                 $this->response->responseCode = "119";
                 $this->response->responseMessage = "Nothing Pending for this User";
                 return $this->response;
@@ -355,17 +374,19 @@ class UserManagementService implements IUserManagementService
             $this->response->data = $users;
             $this->response->responseCode = "000";
             $this->response->responseMessage = "User Management Verification Successful";
+
             DB::commit();
+
             return $this->response;
 
 
         }catch (\Exception $e){
-            DB::rollback();
-            Log::info($e->getMessage());
-            $this->response->responseCode = "907";
-            $this->response->responseMessage = $e->getMessage();
-            return $this->response;
-        }/**/
+             DB::rollback();
+             Log::info($e->getMessage());
+             $this->response->responseCode = "907";
+             $this->response->responseMessage = $e->getMessage();
+             return $this->response;
+         }/* */
 
     }
 
@@ -378,7 +399,6 @@ class UserManagementService implements IUserManagementService
         $this->response->responseMessage = "Request Successful";
         return $this->response;
     }
-
 
     public function permissionsDetails($slug) : UserManagementResponse
     {
@@ -530,7 +550,7 @@ class UserManagementService implements IUserManagementService
         if(trim($functionCode) === "A"){
             //$user = DB::table('users')->where('id', $userId)->first();
             if($approveOrReject === "A"){
-                $this->activateUser($userId);
+                //$this->activateUser($userId);
                 DB::table('users')
                     ->where('id', $userId)
                     ->update(['new_user' => 'N']);
@@ -554,10 +574,12 @@ class UserManagementService implements IUserManagementService
             }
         }
         else{
-            $userMod = DB::table('users_mod')->where('id', $userId)->first();
+            $userMod = DB::table('users_mod')->where('user_id', $userId)->first();
+            if(empty($userMod))
+                throw new \Exception("No Modification Pending for this user");
             if($approveOrReject === "A"){
                 DB::table('users')
-                    ->where('id', $userMod->old_id)
+                    ->where('id', $userMod->user_id)
                     ->update(['new_user' => 'N',
                         'email'       => $userMod->email,
                         'username'       => $userMod->username,
@@ -565,11 +587,33 @@ class UserManagementService implements IUserManagementService
                         'first_name'  => $userMod->first_name,
                         'last_name'   => $userMod->last_name,
                         'emp_id' => $userMod->emp_id,
+                        'two_factor' => $userMod->two_factor,
+                        'sol_id' => $userMod->sol_id,
+                        'region' => $userMod->region
 
                         ]);
+                $sentinelUser = Sentinel::findById($userId);
+                $role = Sentinel::findRoleBySlug($userMod->role);
+                $userRoles =  $sentinelUser->roles()->get();
+                //$userRole->users()->detach($sentinelUser);
+
+                foreach ($userRoles as $userRole){
+                    $userRole->users()->detach($sentinelUser);
+                }
+                $role->users()->attach($sentinelUser);
+                //Attach permissions
+                /*if ($request->has('permissions')){
+                    foreach ($request->permissions as $permission){
+                        $sentinelUser->addPermission($permission,true);
+                        $sentinelUser->save();
+                    }
+                }*/
+                DB::table('users_mod')
+                    ->where('user_id', $userId)
+                    ->delete();
             }else{
                 DB::table('users_mod')
-                    ->where('id', $userId)
+                    ->where('user_id', $userId)
                     ->delete();
             }
         }

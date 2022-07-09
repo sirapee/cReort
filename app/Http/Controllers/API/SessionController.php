@@ -18,6 +18,7 @@ class SessionController extends Controller
     {
         $this->middleware('auth:api', ['except' => ['userLogin', 'twoFactor']]);
         $this->session = $sessionService;
+        //
     }
 
     public function userLogin(Request $request){

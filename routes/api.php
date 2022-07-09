@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\InquiryController;
 use App\Http\Controllers\API\ReconciliationController;
+use App\Http\Controllers\API\ReportsController;
 use App\Http\Controllers\API\SessionController;
 use App\Http\Controllers\API\SettlementController;
 use App\Http\Controllers\API\UserManagementController;
@@ -56,6 +57,7 @@ Route::group(['prefix' => 'v1/'], function () {
         Route::get('/getUserADDetails/{id}', [UserManagementController::class, 'details'] );
 
         Route::get('{id}/view', [UserManagementController::class, 'viewDetails'] );
+        Route::get('/pending/{id}/{functionCode}', [UserManagementController::class, 'pendingDetails'] );
         Route::post('/verify', [UserManagementController::class, 'verify'] );
         Route::get('/addExtras', [UserManagementController::class, 'addExtras'] );
         Route::get('/pending', [UserManagementController::class, 'pendingAuthorization'] );
@@ -73,12 +75,31 @@ Route::group(['prefix' => 'v1/'], function () {
         Route::get('/sols', [InquiryController::class, 'sols'] );
         Route::get('/regions', [InquiryController::class, 'regions'] );
         Route::get('/regions/{region}/sols', [InquiryController::class, 'solsByRegion'] );
+        Route::get('/coverage', [InquiryController::class, 'coverage'] );
 
 
     });
 
     Route::group(array('prefix' => 'recon'), function () {
         Route::post('/initiate', [ReconciliationController::class, 'initiate'] );
+
+    });
+
+    Route::group(array('prefix' => 'reports'), function () {
+        Route::get('/dashboard', [ReportsController::class, 'dashboard'] );
+        Route::get('/reconciled', [ReportsController::class, 'reconciled'] );
+        Route::get('/settlement', [ReportsController::class, 'settlement'] );
+        Route::get('/reversed', [ReportsController::class, 'reversed'] );
+        Route::get('/unimpacted', [ReportsController::class, 'unImpacted'] );
+
+        Route::group(array('prefix' => 'excel'), function () {
+            Route::get('/reconciled', [ReportsController::class, 'reconciledExcel'] );
+            Route::get('/settlement', [ReportsController::class, 'settlementExcel'] );
+            Route::get('/reversed', [ReportsController::class, 'reversedExcel'] );
+            Route::get('/unimpacted', [ReportsController::class, 'unImpactedExcel'] );
+            Route::get('/all', [ReportsController::class, 'allExcel'] );
+
+        });
 
     });
 });

@@ -100,7 +100,7 @@ class HelperFunctions
     public static function generateBatchNumber(){
         //$random = str_pad(mt_rand(11111111,99999999),10,'0',STR_PAD_RIGHT);
         //return $random.now()->timestamp;
-        return 'EA'.date('YmdHis');
+        return 'CREPORT'.date('YmdHis');
     }
 
 
