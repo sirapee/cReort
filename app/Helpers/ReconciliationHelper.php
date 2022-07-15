@@ -41,32 +41,32 @@ class ReconciliationHelper
             $reconciledCount = $reconciledQuery->where('SolId', $solId)->count();
 
             $last10Settled = $settledQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date) as RequestDate"))
                 ->where('SolId', $solId)
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
 
             $last10Reversed = $reversedQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date) as RequestDate"))
                 ->where('SolId', $solId)
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
 
             $last10Settlement = $settlementQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, TranDateFinacle'))
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, TranDateFinacle"))
                 ->where('SolId', $solId)
                 ->groupBy('BatchNumber', 'TranDateFinacle', 'status')
                 ->get();
 
             $last10UnImpacted = $unImpactedQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date) as RequestDate"))
                 ->where('SolId', $solId)
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
             $last10Reconciled = $reconciledQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date) as RequestDate"))
                 ->where('SolId', $solId)
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
 
             //Data
@@ -81,66 +81,66 @@ class ReconciliationHelper
             $reconciledCount = $reconciledQuery->where('Region', $region)->count();
 
             $last10Settled = $settledQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date) as RequestDate"))
                 ->where('Region', $region)
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
 
             $last10Reversed = $reversedQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date) as RequestDate"))
                 ->where('Region', $region)
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
 
             $last10Settlement = $settlementQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, TranDateFinacle'))
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, TranDateFinacle"))
                 ->where('Region', $region)
                 ->groupBy('BatchNumber', 'TranDateFinacle', 'status')
                 ->get();
 
             $last10UnImpacted = $unImpactedQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date)"))
                 ->where('Region', $region)
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
 
             $last10Reconciled = $reconciledQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date) as RequestDate"))
                 ->where('Region', $region)
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
         }else{
-            $allCount = $allQuery->count();
-            $reconciledCount = $reconciledQuery->count();
-            $settledCount = $settledQuery->count();
-            $reversedCount = $reversedQuery->count();
-            $settlementCount = $settlementQuery->count();
-            $unImpactedCount = $unImpactedQuery->count();
+            $allCount = number_format($allQuery->count());
+            $reconciledCount = number_format($reconciledQuery->count());
+            $settledCount = number_format($settledQuery->count());
+            $reversedCount = number_format($reversedQuery->count());
+            $settlementCount = number_format($settlementQuery->count());
+            $unImpactedCount = number_format($unImpactedQuery->count());
             $all = $allGet->get();
 
             $last10Settled = $settledQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date) as RequestDate"))
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
 
             $last10Reversed = $reversedQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date) as RequestDate"))
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
 
             $last10Settlement = $settlementQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, TranDateFinacle'))
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, TranDateFinacle"))
                 ->groupBy('BatchNumber', 'TranDateFinacle', 'status')
                 ->get();
 
             $last10UnImpacted = $unImpactedQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date) as RequestDate"))
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
 
             $last10Reconciled = $reconciledQuery
-                ->select(DB::raw('count(*) as user_count, status, BatchNumber, RequestDate'))
-                ->groupBy('BatchNumber', 'RequestDate', 'status')
+                ->select(DB::raw("REPLACE(CONVERT(VARCHAR,CONVERT(MONEY,count(*)),1), '.00','') as user_count, status, BatchNumber, cast(RequestDate as date) as RequestDate"))
+                ->groupBy(DB::raw(' status, BatchNumber, cast(RequestDate as date)'))
                 ->get();
         }
 

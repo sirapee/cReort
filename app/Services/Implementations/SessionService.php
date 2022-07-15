@@ -44,7 +44,13 @@ class SessionService implements ISessionService
                 $user =  $this->adminLogin($request);
             }
             else{
-                $user = $this->ADLogin($request);
+
+                if(env("APP_ENVIRONMENT") !== "Development" && env("APP_ENVIRONMENT") !== "Test"){
+                    $user = $this->ADLogin($request);
+                }else{
+                    $user = User::byUsername(trim($loginUsername));
+                }
+
                 $systemPassword = config('app.default_key');
                 $password = decrypt($systemPassword);
                 $request->merge(['password' => $password]);
@@ -74,20 +80,6 @@ class SessionService implements ISessionService
             $code = "000";
         }
         return $this->sendResult($message,$data,$errors,$status, $code);
-    }
-
-
-    public function getAuthenticatedUserWallet()
-    {
-        $user = getLoggedInUser();
-        if($user->user_type == "M"){
-            $merchant = getMerchantDetails($user->emp_id);
-            $walletDetails = getWalletDetails($merchant->payable_wallet_number);
-        }else{
-            $empId = getLoggedInStaffId();
-            $walletDetails = getWalletDetails($empId);
-        }
-        return $walletDetails;
     }
 
     public function twoFactor (Request $request): \Illuminate\Http\JsonResponse
@@ -256,7 +248,7 @@ class SessionService implements ISessionService
     {
         if (Sentinel::login($sentinelUser)) {
             $slug = Sentinel::getUser()->roles()->first()->slug;
-            $roles = ['authorizer','support','audit','sac_authorizer','sac','settlement_inputter','settlement_authorizer','sac_authorizer','ecards_inputter','ecards_authorizer'];
+            $roles = ['branch.user','support','sub.admin','rco','head_office.user','sac','user','admin'];
             ///if ($slug == 'support' || $slug == 'audit' || $slug == 'sac_authorizer' || $slug == 'sac' || $slug == 'settlement_inputter' || $slug == 'settlement_authorizer') {
             if(in_array($slug,$roles)){
                 return true;

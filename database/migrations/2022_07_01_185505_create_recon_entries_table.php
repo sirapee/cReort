@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('recon_entries', function (Blueprint $table) {
+        Schema::create('reconciled_entries', function (Blueprint $table) {
             $table->id();
 
             $table->string('BatchNumber', 100);
@@ -79,6 +79,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('recon_entries');
+        Schema::dropIfExists('reconciled_entries');
     }
 };

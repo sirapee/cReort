@@ -860,6 +860,7 @@ function getSolByRegions($region): \Illuminate\Database\Eloquent\Collection
 {
     return SolRegion::where('region', $region)
         ->select('SolId', 'EcName', 'EcAddress')
+        ->orderBy('EcName')
         ->get();
 }
 
@@ -872,6 +873,7 @@ function getRegions(): \Illuminate\Database\Eloquent\Collection
 function getSols(): \Illuminate\Database\Eloquent\Collection
 {
     return SolRegion::select('SolId', 'EcName', 'EcAddress')
+        ->orderBy('EcName')
         ->distinct()->get();
 }
 
@@ -910,6 +912,30 @@ function checkDuplicateRecon($coverage, $tranDate, $solId = '', $region = '' ): 
         return true;
     }
     return false;
+}
+
+function validateReconAndProceed($tranDate, $tranDatePlus, $tranType = '1'): bool
+{
+    $reconCount = DB::connection('sqlsrv_postilion')->table('post_office_atm_transactions')
+        ->whereDate('DateLocal', $tranDate)
+        ->where('TranType', $tranType)->where('ResponseCode', '0')
+        ->count();
+
+    if($reconCount === 0) {
+        return false;
+    }
+
+    $reconCountPlus = DB::connection('sqlsrv_postilion')->table('post_office_atm_transactions')
+        ->whereDate('DateLocal', $tranDatePlus)
+        ->where('TranType', $tranType)->where('ResponseCode', '0')
+        ->count();
+
+    if($reconCountPlus === 0) {
+        return false;
+    }
+
+    return true;
+
 }
 
 

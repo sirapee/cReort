@@ -36,7 +36,8 @@ class UserManagementService implements IUserManagementService
     {
         //Log::info(encrypt("P@sswo0rd"));
         // Grab all the users
-        $users = User::where('new_user', 'N')->get();
+        $users = User::where('new_user', 'N')
+            ->whereNotIn('username',['admin', 'admin2'])->get();
         // Do we want to include the deleted users?
         if ($request->get('withTrashed')) {
             $users = User::withTrashed()->get();
@@ -242,8 +243,8 @@ class UserManagementService implements IUserManagementService
 
 
             $faker = Factory::create();
-            $firstName = $faker->firstName;
-            $lastName = $faker->lastName;
+            $firstName = $faker->firstName();
+            $lastName = $faker->lastName();
             $username = strtolower($firstName .'.'.$lastName);
             $email = $username.'@.tys.com';
             $department = $faker->randomElement(['System Access Control', 'E-Banking Control', 'Regional Control', 'Business Services']);
@@ -347,7 +348,7 @@ class UserManagementService implements IUserManagementService
             $userId = trim($request->userId);
             $auditDetails = UserManagementAudit::where('user_id', $userId)
                 ->whereNull('authorizer')->first();
-            if(!empty($auditDetails)){
+            if(empty($auditDetails)){
                 $this->response->responseCode = "119";
                 $this->response->responseMessage = "Nothing Pending for this User";
                 return $this->response;
