@@ -17,6 +17,8 @@ return new class extends Migration
             $table->id();
             $table->string('BatchNumber', 100);
             $table->string('Coverage', 100);
+            $table->enum('Channel',['NIP', 'FEP','ETZ'])->default('FEP');
+            $table->enum('DeviceType',['ATM', 'POS','WEB', 'MOB'])->default('ATM');
             $table->string('SolId', 5)->nullable();
             $table->string('Region', 50)->nullable();
             $table->date('TranDate');

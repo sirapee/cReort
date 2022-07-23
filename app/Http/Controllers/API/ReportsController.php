@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\API;
 
 use App\Exports\AllEntriesExport;
+use App\Exports\AllNibssExport;
 use App\Exports\ReconciledExport;
+use App\Exports\ReconciliationExport;
 use App\Exports\ReversedExport;
 use App\Exports\SettlementExport;
 use App\Exports\UnImpactedExport;
@@ -26,6 +28,11 @@ class ReportsController extends Controller
         return $this->reconciliationHelper->dashboard();
     }
 
+    public function nibssDashboard (): \Illuminate\Http\JsonResponse
+    {
+        return $this->reconciliationHelper->nibssDashboard();
+    }
+
     public function settlement (Request $request): \Illuminate\Http\JsonResponse
     {
         return $this->reconciliationHelper->settlement($request);
@@ -46,7 +53,24 @@ class ReportsController extends Controller
         return $this->reconciliationHelper->reversed($request);
     }
 
+    //NIPS
+    public function reconciledNibss (Request $request): \Illuminate\Http\JsonResponse
+    {
+        return $this->reconciliationHelper->reconciledNibss($request);
+    }
+
+    public function reversedNibss (Request $request): \Illuminate\Http\JsonResponse
+    {
+        return $this->reconciliationHelper->reversedNibss($request);
+    }
+
     //Excel Export
+
+    public function reconciliationExcel (Request $request): \Illuminate\Http\Response|\Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $filename = 'ReconciliationFor_'.$request->tranDate;
+        return (new ReconciliationExport($request->terminal, $request->tranDate))->download($filename.'.xlsx');
+    }
 
     public function reconciledExcel (Request $request): \Illuminate\Http\Response|\Symfony\Component\HttpFoundation\BinaryFileResponse
     {
@@ -131,5 +155,22 @@ class ReportsController extends Controller
             }
         }
         return (new AllEntriesExport($request->terminal, $request->tranDate))->download($filename.'.xlsx');
+    }
+
+    public function allNibssExcel (Request $request): \Illuminate\Http\Response|\Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $filename = 'NIPReconciliationFor_'.$request->tranDate;
+        if($request->has('downloadFormat')){
+            $format = $request->downloadFormat;
+            if($format === 'csv'){
+                return (new AllNibssExport($request->batchNumber, $request->tranDate))
+                    ->download($filename.'.csv', \Maatwebsite\Excel\Excel::CSV);
+            }
+            if($format === 'pdf'){
+                return (new AllNibssExport($request->batchNumber, $request->tranDate))
+                    ->download($filename.'.pdf', \Maatwebsite\Excel\Excel::DOMPDF);
+            }
+        }
+        return (new AllNibssExport($request->batchNumber, $request->tranDate))->download($filename.'.xlsx');
     }
 }

@@ -87,17 +87,22 @@ Route::group(['prefix' => 'v1/'], function () {
 
     Route::group(array('prefix' => 'reports'), function () {
         Route::get('/dashboard', [ReportsController::class, 'dashboard'] );
+        Route::get('/dashboard-nibss', [ReportsController::class, 'nibssDashboard'] );
         Route::get('/reconciled', [ReportsController::class, 'reconciled'] );
         Route::get('/settlement', [ReportsController::class, 'settlement'] );
         Route::get('/reversed', [ReportsController::class, 'reversed'] );
         Route::get('/unimpacted', [ReportsController::class, 'unImpacted'] );
+        Route::get('/reversed-nibss', [ReportsController::class, 'reversedNibss'] );
+        Route::get('/reconciled-nibss', [ReportsController::class, 'reconciledNibss'] );
 
         Route::group(array('prefix' => 'excel'), function () {
+            Route::get('/reconciliation', [ReportsController::class, 'reconciliationExcel'] );
             Route::get('/reconciled', [ReportsController::class, 'reconciledExcel'] );
             Route::get('/settlement', [ReportsController::class, 'settlementExcel'] );
             Route::get('/reversed', [ReportsController::class, 'reversedExcel'] );
             Route::get('/unimpacted', [ReportsController::class, 'unImpactedExcel'] );
             Route::get('/all', [ReportsController::class, 'allExcel'] );
+            Route::get('/all-nibss', [ReportsController::class, 'allNibssExcel'] );
 
         });
 

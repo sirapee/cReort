@@ -44,7 +44,7 @@ return new class extends Migration
             $table->date('EntryDate')->nullable();
             $table->string('ResponseCode', 100)->nullable();
             $table->string('TriggeredBy', 100)->nullable();
-            $table->enum('Status', ['Reconciled','Successful', 'UnImpacted','Reversed','Settlement'])->nullable();
+            $table->string('Status',20)->nullable();
             $table->boolean('IsReversed')->default(false);
             $table->integer('ReversalId')->nullable();
             $table->timestamps();

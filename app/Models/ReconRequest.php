@@ -9,6 +9,6 @@ class ReconRequest extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['RequestedBy', 'BatchNumber', 'Coverage', 'SolId', 'Region', 'TranDate'];
+    protected $fillable = ['RequestedBy', 'BatchNumber', 'Coverage', 'SolId', 'Region', 'TranDate', 'Channel','DeviceType'];
 
 }

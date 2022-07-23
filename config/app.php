@@ -119,6 +119,7 @@ return [
     'token_lifetime' =>env('TOKEN_LIFETIME', '60'),
     'isTest' =>env('IS_TEST', 'Y'),
     'settlement_path' => env(public_path('UPLOAD_FILE_PATH'),public_path('settlements')),
+    'nibss_settlement_path' => env(public_path('UPLOAD_FILE_PATH_NIBSS'),public_path('nibss_settlements')),
     'identity_authority' =>env('IDENTITY_AUTHORITY', 'http://identityserver.com:7000/connect/token'),
 
     'client_id' =>env('CLIENT_ID', 'http://identityserver.com:7000/connect/token'),

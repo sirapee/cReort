@@ -1,35 +1,15 @@
 <?php
 
 
-use App\ClientConfiguration;
-use App\Contracts\Requests\AlertUpload;
-use App\Contracts\Requests\BvnLink;
-use App\Helpers\LogActivity;
-use App\Helpers\States;
-use App\Models\AccountCreationRequest;
-use App\Models\Alert;
-use App\Models\BulkAccountOpen;
-use App\Models\BulkCorporateAccountUpload;
-use App\Models\BulkCustomerUpdateUpload;
-use App\Models\CorporateAccountCreationRequest;
+
 use App\Models\ReconRequest;
 use App\Models\SolRegion;
-use App\Models\SystemConfiguration;
-use App\RunningProcess;
-use App\Upload;
-use App\UserManagementAudit;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
-use Maatwebsite\Excel\Facades\Excel;
 use Cartalyst\Sentinel\Laravel\Facades\Sentinel;
-use App\Helpers\HelperFunctions;
-use App\Helpers\FileUpload;
-use App\AccountOpening;
 use Illuminate\Filesystem\Filesystem;
 
 
@@ -52,24 +32,22 @@ function nonce()
 {
     return substr(str_shuffle(MD5(microtime())), 0, 20);
 }
-function Base64Encode($value)
+function Base64Encode($value): string
 {
-    $base64value =  base64_encode($value);
-    return $base64value;
+    return base64_encode($value);
 }
-function Base64Decode($value)
+function Base64Decode($value): bool|string
 {
-    $base64value =  base64_decode($value);
-    return $base64value;
+    return base64_decode($value);
 }
-function SHA256($signaturecipher)
+function SHA256($signaturecipher): bool|string
 {
     return hash("sha256",$signaturecipher);
 }
 
-function SHA1Here($signaturecipher)
+function SHA1Here($signatureCipher): string
 {
-    return sha1($signaturecipher, false);
+    return sha1($signatureCipher, false);
 }
 
 function getLoggedInUser(){
@@ -98,15 +76,15 @@ function getSolRegion(): array
 
 
 function getLoggedInStaffId(){
-    $processor = getLoggedInUser();
-    return $processor->emp_id;
+    return getLoggedInUser()->emp_id;
 }
 
-function getTokenLifeTime(){
+function getTokenLifeTime(): int
+{
     return (int)config('app.token_lifetime');
 }
 
-function timestamp()
+function timestamp(): int
 {
     return time();
 }
@@ -193,7 +171,8 @@ function defaultSubSector(){
 }
 
 
-function getAccountsLogPath(){
+function getAccountsLogPath(): string
+{
     $path =   config('app.accounts_path'). '\\logs\\';
     checkCreateFolder($path);
     return $path;
@@ -206,7 +185,8 @@ function getToken (){
     return  generateIdentityToken($clientId, $clientSecret,$grantType);
 }
 
-function curlCallRestApi($url, $headers, $jsonEncodedBody, $method){
+function curlCallRestApi($url, $headers, $jsonEncodedBody, $method): bool|string
+{
     $curl = curl_init();
     if ($jsonEncodedBody == null){
         curl_setopt_array($curl, [
@@ -239,7 +219,8 @@ function curlCallRestApi($url, $headers, $jsonEncodedBody, $method){
     return $response;
 }
 
-function createHeaders($url, $method){
+function createHeaders($url, $method): array
+{
     $token = getToken();
     $uniqueKey = twoFactorUniqueKey();
     $encodeUrl = urlencode($url);
@@ -272,7 +253,7 @@ function generateIdentityToken($clientId, $clientSecret, $grantType, $scope = nu
 {
     try{
         $tokenUrl = config('app.identity_authority');
-        if ($scope == null){
+        if ($scope === null){
             $loginBody = [
                 'client_id' => $clientId,
                 'client_secret' => $clientSecret,
@@ -288,15 +269,15 @@ function generateIdentityToken($clientId, $clientSecret, $grantType, $scope = nu
         }
 
         $loginResponse = callService($tokenUrl, $loginBody);
-        $token = $loginResponse['access_token'];
-        return $token;
+        return $loginResponse['access_token'];
     }catch (\Exception $exception){
         Log::info($exception->getMessage());
         return null;
     }
 }
 
-function callServiceHttp($url, $method, $jsonEncodedBody, $headers ){
+function callServiceHttp($url, $method, $jsonEncodedBody, $headers ): \http\Message\Body
+{
     $client = new http\Client();
     $request = new http\Client\Request();
 
@@ -310,43 +291,55 @@ function callServiceHttp($url, $method, $jsonEncodedBody, $headers ){
     $request->setOptions(array());
     $request->setHeaders($headers);
     $client->enqueue($request)->send();
-    $response = $client->getResponse();
-    return $response->getBody();
+    return $client->getResponse()->getBody();
 }
 
-function getUploadFilepath(){
+function getUploadFilepath(): string
+{
     $path =   config('app.accounts_path'). '\\Uploads\\';
     checkCreateFolder($path);
     return $path;
 }
 
-function getMandateFilepath(){
+function getMandateFilepath(): string
+{
     $path =   config('app.accounts_path'). '\\mandate\\';
     checkCreateFolder($path);
     return $path;
 }
 
-function getDocumentsFilepath(){
+function getDocumentsFilepath(): string
+{
     $path =   config('app.accounts_path'). '\\documents\\';
     checkCreateFolder($path);
     return $path;
 }
 
-function getUserMandateFilepath(){
+function getUserMandateFilepath(): string
+{
     $path =   config('app.accounts_path'). '\\mandate\\'.strtoupper(getLoggedInStaffId());
     checkCreateFolder($path);
     return $path;
 }
 
-function getSettlementFilepath(){
+function getSettlementFilepath(): string
+{
     $format = 'Ymd';
-    $now = date($format );
+    $now = date($format);
     $path =   config('app.settlement_path'). '\\'.$now.'\\';//.strtoupper(getLoggedInStaffId());
     checkCreateFolder($path);
     return $path;
 }
 
-function getAccountsReportPath(){
+function getNibbsSettlementFilepath($date): string
+{
+    $path =   config('app.nibss_settlement_path'). '\\'.$date.'\\';//.strtoupper(getLoggedInStaffId());
+    checkCreateFolder($path);
+    return $path;
+}
+
+function getAccountsReportPath(): string
+{
     $path =   config('app.accounts_path').'\\reports\\';
     checkCreateFolder($path);
     return $path;
@@ -378,7 +371,7 @@ function validateToken($username, $tokenCode, $userGroup){
  * @param $fields
  * @param $batchNumber
  */
-function accountsWriteLog($text, $batchNumber ='APINA')
+function cReportWriteLog($text, $batchNumber ='APINA'): bool
 {
     writeToFile(getAccountsReportPath() .'\\'. $batchNumber . '.txt', $text);//
     writeLogs($text);
@@ -386,7 +379,8 @@ function accountsWriteLog($text, $batchNumber ='APINA')
     return true;
 }
 
-function checkCreateFolder($path){
+function checkCreateFolder($path): bool
+{
     if (!file_exists($path)) {
         if (!mkdir($path, 0777, true) && !is_dir($path)) {
             throw new \RuntimeException(sprintf('Directory "%s" was not created', $path));
@@ -398,11 +392,11 @@ function checkCreateFolder($path){
 function base64EncodedImage($path){
     $extension = pathinfo($path, PATHINFO_EXTENSION);
     $data = file_get_contents($path);
-    $encodedImage = Base64Encode($data);
-    return $encodedImage;
+    return Base64Encode($data);
 }
 
-function validateBase64Image($base64String){
+function validateBase64Image($base64String): bool
+{
     $str = base64_decode($base64String, true);
     writeLogs($str);
     if ($str === false ) {
@@ -411,7 +405,8 @@ function validateBase64Image($base64String){
     return true;
 }
 
-function moveFile($sourceFile, $destinationDirectory){
+function moveFile($sourceFile, $destinationDirectory): bool
+{
     $filesystem = new Filesystem();
     $path = $sourceFile;
     $filesystem->move($path,$destinationDirectory);
@@ -419,7 +414,8 @@ function moveFile($sourceFile, $destinationDirectory){
 }
 
 
-function writeToFile($path,$content){
+function writeToFile($path,$content): bool
+{
     $format = 'Y/m/d H:i:s';
     $now = date($format );
     file_put_contents(($path), $now.' '.$content."\n", FILE_APPEND | LOCK_EX);
@@ -435,11 +431,12 @@ function writeToFile($path,$content){
  * @param $name
  * @return Boolean
  */
-function fileSFTP($content, $destinationPath, $fileName, $name='sftp'){
+function fileSFTP($content, $destinationPath, $fileName, $name='sftp'): bool
+{
     try {
         $destinationFile = $destinationPath .'/'.$fileName;
         if (!Storage::disk($name)->exists($destinationPath)){
-            if(config('app.make_ftp_dir_if_not_exist') == 'Y'){
+            if(config('app.make_ftp_dir_if_not_exist') === 'Y'){
                 Storage::disk($name)->makeDirectory($destinationPath);
             }else{
                 Log::info($destinationPath. ' does not exist');
@@ -457,186 +454,76 @@ function fileSFTP($content, $destinationPath, $fileName, $name='sftp'){
 
 
 
-/**
- * @param $value
- * @return array
- */
-function getSheetValues($value)
-{
-
-    $salutation = htmlspecialchars(str_replace("'", "", trim($value->salutation)));
-    $firstname = htmlspecialchars(str_replace("'", "", trim($value->firstname)));
-    $middlename = htmlspecialchars(str_replace("'", "", trim($value->middlename)));
-    $lastname = htmlspecialchars(str_replace("'", "", trim($value->lastname)));
-    $email = htmlspecialchars(str_replace("'", "", trim($value->email)));
-    $manager = htmlspecialchars(str_replace("'", "", trim($value->manager)));
-    if($manager == '' || $manager == null){
-        $manager = 'RT002OF08';
-    }
-    $gender = htmlspecialchars(str_replace("'", "", trim($value->gender)));
-    $bvn = htmlspecialchars(str_replace("'", "", trim($value->bvn)));
-    $phonenumber = htmlspecialchars(str_replace("'", "", trim($value->phonenumber)));
-    $cifid = htmlspecialchars(str_replace("'", "", trim($value->cifid)));
-    $schemecode = htmlspecialchars(str_replace("'", "", trim($value->schemecode)));
-    if($schemecode == '' || $schemecode == null){
-        $schemecode = 'SBLLA';
-    }
-    $schemetype = htmlspecialchars(str_replace("'", "", trim($value->schemetype)));
-    if($schemetype == '' || $schemetype == null){
-        $schemetype = 'SBA';
-    }
-    $glsubheadcode = htmlspecialchars(str_replace("'", "", trim($value->glsubheadcode)));
-    if ($glsubheadcode == '' || $glsubheadcode == null){
-        $glsubheadcode = '29000';
-    }
-    //
-    $currency = htmlspecialchars(str_replace("'", "", trim($value->currency)));
-    if ($currency == '' || $currency == null){
-        $currency = 'NGN';
-    }
-    $introducercode = htmlspecialchars(str_replace("'", "", trim($value->introducercode)));
-    if ($introducercode == '' || $introducercode == null){
-        $introducercode = 'IU1311003';
-    }
-    $solid = htmlspecialchars(str_replace("'", "", trim($value->solid)));
-    if ($solid == '' || $solid == null){
-        $solid = '001';
-    }
-    $city = htmlspecialchars(str_replace("'", "", trim($value->city)));
-    if ($city == '' || $city == null){
-        $city = '75';
-    }
-    $country = htmlspecialchars(str_replace("'", "", trim($value->country)));
-    if ($country == '' || $country == null){
-        $country = 'NG';
-    }
-    $postalcode = htmlspecialchars(str_replace("'", "", trim($value->postalcode)));
-    if ($postalcode == '' || $postalcode == null){
-        $postalcode = '234';
-    }
-    $state = htmlspecialchars(str_replace("'", "", trim($value->state)));
-    if ($state == '' || $state == null){
-        $state = '17';
-    }
-    $occupation = htmlspecialchars(str_replace("'", "", trim($value->occupation)));
-    if ($solid == '' || $solid == null){
-        $solid = 'OTH';
-    }
-    $birthdate = htmlspecialchars(str_replace("'", "", trim($value->birthdate)));
-    $birthmonth = htmlspecialchars(str_replace("'", "", trim($value->birthmonth)));
-    $birthyear = htmlspecialchars(str_replace("'", "", trim($value->birthyear)));
-    $address = htmlspecialchars(str_replace("'", "", trim($value->address)));
-    $iscustomernre = htmlspecialchars(str_replace("'", "", trim($value->iscustomernre)));
-    $isminor = htmlspecialchars(str_replace("'", "", trim($value->isminor)));
-    $staffflag = htmlspecialchars(str_replace("'", "", trim($value->staffflag)));
-    $staffemployeeid = htmlspecialchars(str_replace("'", "", trim($value->staffemployeeid)));
-    if ($staffflag == 'Y' && ($solid == '' || $solid == null)){
-        $solid = 'SYSTEM';
-    }
-    $maritalstatus = htmlspecialchars(str_replace("'", "", trim($value->maritalstatus)));
-    $card_request = htmlspecialchars(str_replace("'", "", trim($value->card_request)));
-    $card_type = htmlspecialchars(str_replace("'", "", trim($value->card_type)));
-    $enable_alert = htmlspecialchars(str_replace("'", "", trim($value->enable_alert)));
-    $initial_deposit = htmlspecialchars(str_replace("'", "", trim($value->initial_deposit)));
-    if ($initial_deposit == '' || $initial_deposit == null){
-        $initial_deposit = '0';
-    }
-    $limitamount = htmlspecialchars(str_replace("'", "", trim($value->limitamount)));
-    if ($limitamount == '' || $limitamount == null){
-        $limitamount = '0';
-    }
-    $sanctiondate = htmlspecialchars(str_replace("'", "", trim($value->sanctiondate)));
-    $sanctionrefno = htmlspecialchars(str_replace("'", "", trim($value->sanctionrefno)));
-    $limitexpirydate = htmlspecialchars(str_replace("'", "", trim($value->limitexpirydate)));
-    $repaymentaccount = htmlspecialchars(str_replace("'", "", trim($value->repaymentaccount)));
-    $deposittermdays = htmlspecialchars(str_replace("'", "", trim($value->deposittermdays)));
-    $deposittermmonths = htmlspecialchars(str_replace("'", "", trim($value->deposittermmonths)));
-    $depositamount = htmlspecialchars(str_replace("'", "", trim($value->depositamount)));
-    $interesttablecode = htmlspecialchars(str_replace("'", "", trim($value->interesttablecode)));
-    $renewaltermdays = htmlspecialchars(str_replace("'", "", trim($value->renewaltermdays)));
-    $renewaltermmonths = htmlspecialchars(str_replace("'", "", trim($value->renewaltermmonths)));
-    $acctprefint = htmlspecialchars(str_replace("'", "", trim($value->acctprefint)));
-    if ($acctprefint == '' || $acctprefint == null){
-        $acctprefint = '0';
-    }
-    $debitacctountid = htmlspecialchars(str_replace("'", "", trim($value->debitacctountid)));
-
-   // $valueDate = trim($value->value_date);
-    //$valueDate = HelperFunctions::createDate('Y-m-d', $valueDate);
-
-    return array($salutation , $firstname , $middlename , $lastname , $email , $manager , $gender , $bvn , $phonenumber ,
-            $cifid , $schemecode , $schemetype , $glsubheadcode , $currency , $introducercode , $solid , $city , $country ,
-        $postalcode , $state , $occupation , $birthdate , $birthmonth , $birthyear , $address , $iscustomernre , $isminor ,
-        $staffflag , $staffemployeeid , $maritalstatus , $card_request , $card_type , $enable_alert , $initial_deposit ,
-        $limitamount , $sanctiondate , $sanctionrefno , $limitexpirydate , $repaymentaccount , $deposittermdays ,
-        $deposittermmonths , $depositamount , $interesttablecode , $renewaltermdays , $renewaltermmonths , $acctprefint , $debitacctountid );
-}
-
-
 function collectionToArray($oldValues)
 {
-    $oldValues = $oldValues->map(function ($oldValues) {
+    return $oldValues->map(function ($oldValues) {
         return collect($oldValues->toArray())
             ->except(['deleted_at', 'created_at', 'updated_at', 'created_by', 'updated_by', 'id'])
             ->all();
     });
-    return $oldValues;
 }
 
 function collectionToArrayUsers($oldValues)
 {
-    $oldValues = $oldValues->map(function ($oldValues) {
+    return $oldValues->map(function ($oldValues) {
         return collect($oldValues->toArray())
             ->except(['deleted_at', 'created_at', 'updated_at', 'created_by',
                 'verified_by', 'modified_by', 'id', 'last_login', 'deleted',  'profilePix', 'modified_date', 'permissions'])
             ->all();
     });
-    return $oldValues;
 }
 
-function getDownloadLimit(){
+function getDownloadLimit(): int
+{
     return (int)(config('app.download_limit'));
 }
 
-function maxUploadRowsInstant(){
+function maxUploadRowsInstant(): int
+{
     return (int)((config('app.max_upload_row_instant')));
 }
 
-function createDateFromFormat($format, $dateString, $resultFormat = null){
-    if ($dateString == null || $dateString == ''){
+function createDateFromFormat($format, $dateString, $resultFormat = null): bool|Carbon|string|null
+{
+    if (empty($dateString)){
         return null;
     }
     //dd(Carbon::createFromFormat($format, $dateString));
-    if ($resultFormat == null)
+    if (empty($resultFormat)) {
         return Carbon::createFromFormat($format, $dateString);
+    }
     return  Carbon::parse(Carbon::createFromFormat($format, $dateString))->format($resultFormat);
 }
 
 function executeOracleFunction($functionName, $bindings){
-    $result = DB::connection('oracle')->executeFunction($functionName, $bindings, $returnType = PDO::PARAM_STR, $length = 999);
-    return $result;
+    return DB::connection('oracle')->executeFunction($functionName, $bindings, $returnType = PDO::PARAM_STR, $length = 999);
 }
 
 
-function getClientIp()
+function getClientIp(): bool|array|string
 {
-    $ipaddress = '';
-    if (getenv('HTTP_CLIENT_IP'))
-        $ipaddress = getenv('HTTP_CLIENT_IP');
-    else if(getenv('HTTP_X_FORWARDED_FOR'))
-        $ipaddress = getenv('HTTP_X_FORWARDED_FOR');
-    else if(getenv('HTTP_X_FORWARDED'))
-        $ipaddress = getenv('HTTP_X_FORWARDED');
-    else if(getenv('HTTP_FORWARDED_FOR'))
-        $ipaddress = getenv('HTTP_FORWARDED_FOR');
-    else if(getenv('HTTP_FORWARDED'))
-        $ipaddress = getenv('HTTP_FORWARDED');
-    else if(getenv('REMOTE_ADDR'))
-        $ipaddress = getenv('REMOTE_ADDR');
-    else
-        $ipaddress = 'UNKNOWN';
 
-    return $ipaddress;
+    if (getenv('HTTP_CLIENT_IP')) {
+        return getenv('HTTP_CLIENT_IP');
+    }
+
+    if(getenv('HTTP_X_FORWARDED_FOR')) {
+        return getenv('HTTP_X_FORWARDED_FOR');
+    }
+
+    if(getenv('HTTP_X_FORWARDED')) {
+        return getenv('HTTP_X_FORWARDED');
+    }
+    if(getenv('HTTP_FORWARDED_FOR')) {
+        return getenv('HTTP_FORWARDED_FOR');
+    }
+    if(getenv('HTTP_FORWARDED')) {
+        return getenv('HTTP_FORWARDED');
+    }
+    if(getenv('REMOTE_ADDR')) {
+        return getenv('REMOTE_ADDR');
+    }
+    return 'UNKNOWN';
 }
 
 
@@ -648,7 +535,7 @@ function callService($url,$body, $headers = null){
     }else{
         $response = $client->request("POST", $url, ['headers' => $headers,'form_params'=>$body]);
     }
-    $response = json_decode($response->getBody(), TRUE);
+    $response = json_decode($response->getBody(), TRUE, 512, JSON_THROW_ON_ERROR);
     Log::info($response);
     return $response;
 }
@@ -666,58 +553,8 @@ function callServiceGet($url, $headers = null){
     return $response;
 }
 
-function storeRunningJobs($jobId,$processType,$batchNumber,$settlementType){
-    $format = 'Y/m/d H:i:s';
-    $now = date($format );
-    $id = DB::table('running_processes')->insertGetId(
-        [
-            'job_id' => $jobId,
-            'process_type' => $processType,
-            'settlement_type' => $settlementType,
-            'batch_number'=> $batchNumber,
-            'created_at' => $now,
-            'created_by' => Sentinel::getUser()->username
-        ]
-    );
-    return $id;
-}
-
-function updateJobStatus(){
-    $runningJobs = RunningProcess::all();
-    foreach ($runningJobs as $runningJob){
-        $count = DB::table('jobs')->where('id',$runningJob->job_id)
-            ->count();
-        if($count == 0){
-            $format = 'Y/m/d H:i:s';
-            $now = date($format );
-            DB::table('running_processes')
-                ->where('job_id', $runningJob->job_id)
-                ->whereNotIn('status',['C','E','F'])
-                ->update([
-                    'status' => 'C',
-                    'updated_at' => $now
-                ]);
-        }
-    }
-}
-
-function jobStatus(){
-    updateJobStatus();
-    $runningJobs = RunningProcess::whereIn('process_type',['Reconciliation','Settlement'])
-        ->orderBy('created_at','desc')->paginate(5);
-    return $runningJobs;
-}
-
-
-function checkRunningProcess($processType,$settlementType){
-    return DB::table('running_processes')
-        ->where('process_type',$processType)
-        ->where('settlement_type', $settlementType)
-        ->where('status','R')
-        ->count();
-}
-
-function writeLogs($message){
+function writeLogs($message): bool
+{
     if (Sentinel::check()){
         $user = Sentinel::getUser()->username;
     }else{
@@ -727,11 +564,15 @@ function writeLogs($message){
     return true;
 }
 
-function randomNumber($length) {
+/**
+ * @throws Exception
+ */
+function randomNumber($length): string
+{
     $result = '';
 
     for($i = 0; $i < $length; $i++) {
-        $result .= mt_rand(0, 9);
+        $result .= random_int(0, 9);
     }
 
     return $result;
@@ -758,84 +599,32 @@ function  cacheClear(){
     Cache::forget('reversal_pending_posting_count');
 }
 
-function acceptableUploadFileSize($fileSize){
+function acceptableUploadFileSize($fileSize): bool
+{
     if ($fileSize >= getMaxUploadFileSize()){
         return false;
     }
     return true;
 }
 
-function isMaxUploadRowInstant($rowCount){
-    if($rowCount > maxUploadRowsInstant()){
-        return false;
-    }
-    return true;
+function isMaxUploadRowInstant($rowCount): bool
+{
+    return $rowCount <= maxUploadRowsInstant();
 }
 
-function getMaxUploadFileSize(){
+function getMaxUploadFileSize(): int
+{
     return (int)(config('app.max_upload_file_size'));
 }
 
-function getMaxUploadRows(){
+function getMaxUploadRows(): int
+{
     return (int)(config('app.max_upload_row'));
 }
 
-function isMaxAllowedRows($rowCount){
-    if ($rowCount > getMaxUploadRows()){
-        return false;
-    }
-    return true;
-}
-
-function downloadExcel($tableName,$reportName,$queryParameters,  $connection= 'sqlsrv'){
-    $queryResult = getExcelData($tableName,$queryParameters, $connection);
-    prepareDownloadData($queryResult,$reportName,Sentinel::getUser()->username)->export('xlsx');
-}
-
-function storeExcelData($tableName,$reportName,$queryParameters, $inputter, $path,$connection= 'sqlsrv'){
-    $queryResult = getExcelData($tableName,$queryParameters, $connection);
-    prepareDownloadData($queryResult,$reportName,$inputter)->store('xlsx', $path);
-}
-
-function storeAccountDownloadData($startDate,$endDate,$reportName,$inputter, $path){
-    $queryResult = settlementAccountsTransactionExcelData($startDate, $endDate);
-    prepareDownloadData($queryResult,$reportName,$inputter)->store('xlsx', $path);
-    return true;
-}
-
-function getExcelData($tableName,$parameters, $connection) {
-    $limit = getDownloadLimit();
-    return DB::connection($connection)->table($tableName)
-        ->where($parameters)
-        ->limit($limit)
-        ->get()
-        ->map(function ($item, $key) {
-            return (array) $item;
-        })
-        ->all();
-}
-
-function prepareDownloadData($queryResult,$reportName,$author) {
-    return Excel::create($reportName, function($excel) use($reportName,$queryResult, $author) {
-        // Set the title
-        $sheetTitle = substr($reportName,0 , 30);
-        $excel->setTitle($sheetTitle);
-        $companyName = companyName();
-        // Chain the setters
-        $excel->setCreator($author)
-            ->setCompany($companyName);
-
-        // Call them separately
-
-        $description = substr($reportName,0,20);
-        $excel->setDescription($description);
-
-        $sheetTitle = substr($reportName,0,10);
-        $excel->sheet($sheetTitle, function($sheet) use($queryResult) {
-
-            $sheet->fromArray($queryResult);
-        });
-    });
+function isMaxAllowedRows($rowCount): bool
+{
+    return $rowCount <= getMaxUploadRows();
 }
 
 function cacheQuery($sql, $timeout = 60) {
@@ -889,25 +678,33 @@ function getOriginalDetails($terminalId, $rrn, $stan, $pan): object|null
     ])->first();
 }
 
-function checkDuplicateRecon($coverage, $tranDate, $solId = '', $region = '' ): bool
+function checkDuplicateRecon($coverage, $tranDate, $channel = 'FEP', $solId = '', $region = '' ): bool
 {
-    if(ReconRequest::whereDate('TranDate', '=', $tranDate)->where('coverage', 'bank')->exists()){
+    if(ReconRequest::whereDate('TranDate', '=', $tranDate)
+        ->where('Channel', $channel)
+        ->where('coverage', 'bank')->exists()){
         Log::info("Reconciliation already Initiated bank wide for $tranDate, Check the report ");
         return true;
     }
     if($coverage === 'region'){
-        if(ReconRequest::whereDate('TranDate', '=', $tranDate)->where('coverage', 'region')->where('region', $region)->exists()){
+        if(ReconRequest::whereDate('TranDate', '=', $tranDate)
+            ->where('Channel', $channel)
+            ->where('coverage', 'region')->where('region', $region)->exists()){
             Log::info("Reconciliation already Initiated for $tranDate and $region region, Check the report ");
             return true;
         }
     }
     if($coverage === 'sol'){
-        if(ReconRequest::whereDate('TranDate', '=', $tranDate)->where('coverage', 'region')->where('solId', $solId)->exists()){
+        if(ReconRequest::whereDate('TranDate', '=', $tranDate)
+            ->where('Channel', $channel)
+            ->where('coverage', 'region')->where('solId', $solId)->exists()){
             Log::info("Reconciliation already Initiated for $tranDate and  $solId sol, Check the report ");
             return true;
         }
     }
-    if(ReconRequest::whereDate('TranDate', '=', $tranDate)->where('coverage', $coverage)->exists()){
+    if(ReconRequest::whereDate('TranDate', '=', $tranDate)
+        ->where('Channel', $channel)
+        ->where('coverage', $coverage)->exists()){
         Log::info("Reconciliation already Initiated for $tranDate and $coverage, Check the report ");
         return true;
     }
@@ -936,6 +733,61 @@ function validateReconAndProceed($tranDate, $tranDatePlus, $tranType = '1'): boo
 
     return true;
 
+}
+
+function checkNibssInward($batchNumber, $sessionId, $amount): bool
+{
+    return DB::table('nibss_settlements')
+                ->where('Amount', $amount)
+                ->where('BatchNumber', $batchNumber)
+                ->where('SessionId', $sessionId)
+                ->where('Direction', '=','Inward')
+                ->exists();
+}
+
+function checkNibssOutward($batchNumber, $sessionId, $amount): bool
+{
+    return DB::table('nibss_settlements')
+        ->where('Amount', $amount)
+        ->where('BatchNumber', $batchNumber)
+        ->where('SessionId', $sessionId)
+        ->where('Direction', '=','Outward')
+        ->exists();
+}
+
+function checkNibssInwarda($batchNumber, $sessionId, $amount){
+    return DB::connection('sqlsrv-nibss')->table('NibssOutwardTranBankFbnM')
+        ->where('Amount', $amount)
+        ->where('BatchNumber', $batchNumber)
+        ->where('Status', '=','Successful')
+        ->where('SessionId', $sessionId)
+        ->exists();
+}
+
+function storeRequest($batchNumber, $tranDate, $requestedBy, $channel = 'FEP', $deviceType = 'ATM'): void
+{
+    ReconRequest::create([
+        'BatchNumber' => $batchNumber,
+        'Coverage' => 'bank',
+        'SolId' => '',
+        'Region' => '',
+        'Channel' => $channel,
+        'DeviceType' => $deviceType,
+        'TranDate' => $tranDate,
+        'RequestedBy' => $requestedBy
+    ]);
+}
+
+function updateRecon($batchNumber){
+    DB::table('recon_requests')
+        ->where('BatchNumber', $batchNumber)
+        ->update(
+            [
+                'Picked' => 'Y',
+                'Processed' => 'Y',
+                'ProcessedDate' => Carbon::now()
+            ]
+        );
 }
 
 

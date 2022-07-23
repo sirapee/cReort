@@ -7,8 +7,9 @@ use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithTitle;
 
-class SettlementExport implements FromQuery , WithHeadings
+class SettlementExport implements FromQuery , WithHeadings, WithTitle
 {
     use Exportable;
     public function __construct(string $tranType = '', $tranDate = '')
@@ -50,5 +51,10 @@ class SettlementExport implements FromQuery , WithHeadings
             'PostingStan' ,'ValueDate' ,'ThreadId' ,'Priority' ,'Picked' ,'Posted' ,'ApprovedForPosting' ,'ApprovedForPostingBy' ,'ApprovedDate' ,
             'PostingResponseCode' ,'PostingResponseMessage' ,'PostingTranId' ,'Status' ,'PostingDate' ,'CreatedAt' ,'UpdatedAt'
         ];
+    }
+
+    public function title(): string
+    {
+        return 'SettlementFor_'.$this->tranDate;
     }
 }

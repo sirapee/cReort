@@ -6,8 +6,9 @@ use App\Models\ReversedEntry;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithTitle;
 
-class ReversedExport implements FromQuery , WithHeadings
+class ReversedExport implements FromQuery , WithHeadings, WithTitle
 {
     use Exportable;
     public function __construct(string $tranType = '', $tranDate = '')
@@ -48,5 +49,10 @@ class ReversedExport implements FromQuery , WithHeadings
             'AmountFinacle' ,'TranIdFinacle' ,'TerminalIdPostilion' ,'TerminalIdFinacle' ,'MessageType' ,'IssuerName' ,'Status' ,
             'EntryDate' ,'ResponseCode' ,'TriggeredBy' ,'CreatedAt' ,'UpdatedAt'
         ];
+    }
+
+    public function title(): string
+    {
+        return 'ReversedFor_'.$this->tranDate;
     }
 }

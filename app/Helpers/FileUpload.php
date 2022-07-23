@@ -49,7 +49,7 @@ class FileUpload
             $zip->extractTo($destination);
             $zip->close();
             chdir($destination);
-            unlink($filename);
+            //unlink($filename);
             return true;
         } else {
             return false;
@@ -67,18 +67,6 @@ class FileUpload
         } else {
             return false;
         }
-    }
-
-    function extractRarFile($destination){
-        $filename = $this->uploadNew($this->files,$destination);
-        $filePath = $destination.'\\'.$filename;
-        $archive = RarArchive::open($filePath);
-
-        $entries = $archive->getEntries();
-        foreach ($entries as $entry) {
-            $entry->extract($destination);
-        }
-        $archive->close();
     }
 
     public function zipFile($file){

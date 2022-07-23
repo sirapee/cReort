@@ -7,8 +7,9 @@ use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithTitle;
 
-class ReconciledExport implements FromQuery , WithHeadings
+class ReconciledExport implements FromQuery , WithHeadings, WithTitle
 {
     use Exportable;
     public function __construct(string $tranType = '', $tranDate = '')
@@ -51,5 +52,10 @@ class ReconciledExport implements FromQuery , WithHeadings
             'PostingResponseCode' ,'PostingResponseMessage' ,'PostingTranId' ,'PostingDate' ,'CreatedAt' ,'UpdatedAt' ,'Status' ,'AccountNumberFinacle' ,
             'AccountNameFinacle' ,'NarrationFinacle' ,'TranCurrencyFinacle'
         ];
+    }
+
+    public function title(): string
+    {
+        return 'ReconciledFor_'.$this->tranDate;
     }
 }

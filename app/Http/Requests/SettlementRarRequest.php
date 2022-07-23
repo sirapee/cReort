@@ -25,6 +25,7 @@ class SettlementRarRequest extends FormRequest
     {
         return [
             'settlementFile' => 'required',
+            'tranDate' => 'required'
         ];
     }
 }

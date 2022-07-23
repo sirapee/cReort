@@ -9,4 +9,6 @@ interface ISettlementUploadService
 {
     public function uploadSettlementRarFile(SettlementRarRequest $request): SettlementUploadResponse;
 
+    //public function readNibssFile(): SettlementUploadResponse;
+
 }

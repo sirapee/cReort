@@ -14,7 +14,7 @@ class SettlementController extends Controller
     public function __construct(ISettlementUploadService $settlementUploadService)
     {
         $this->uploadService = $settlementUploadService;
-       // $this->middleware('auth:api', ['except' => ['register']]);
+        $this->middleware('auth:api');
     }
     public function uploadAndExtractSettlementFiles(SettlementRarRequest $request): \Illuminate\Http\JsonResponse
     {
@@ -23,6 +23,5 @@ class SettlementController extends Controller
             return response()->json($response, 400);
         }
         return response()->json($response);
-
     }
 }

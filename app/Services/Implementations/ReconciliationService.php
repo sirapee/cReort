@@ -4,14 +4,11 @@ namespace App\Services\Implementations;
 
 
 use App\Contracts\Responses\ReconciliationResponse;
-use app\Helpers\HelperFunctions;
-use App\Http\Requests\ReconciliationRequest;
 use App\Models\AllReconData;
 use App\Models\FinacleData;
 use App\Models\ReconEntry;
 use App\Models\ReconRequest;
 use App\Models\ReversedEntry;
-use App\Models\SettledEntry;
 use App\Models\SettlementEntry;
 use App\Models\UnImpactedEntry;
 use App\Services\Interfaces\IReconciliationService;
@@ -36,146 +33,34 @@ class ReconciliationService implements IReconciliationService
         $tranDate = Carbon::parse($date)->format('Y-m-d');
         if(checkDuplicateRecon('bank', $tranDate)){
             $this->response->responseCode = "119";
-            $this->response->responseMessage = "Reconciliation already Initiated, Check the report";
+            $this->response->responseMessage = "Reconciliation already Initiated, Check the report or status";
             return $this->response;
         }
 
         DB::beginTransaction();
         Log::info("Creating a recon request record...");
-        ReconRequest::create([
-            'BatchNumber' => $batchNumber,
-            'Coverage' => 'bank',
-            'SolId' => '',
-            'Region' => '',
-            'TranDate' => $tranDate,
-            'RequestedBy' => $requestedBy
-        ]);
+        storeRequest($batchNumber, $tranDate, $requestedBy);
         Log::info("Done Creating a recon request record...");
 
         Log::info("Fetching data from post office...");
         //$data = DB::table('postilion_data')->where('TranType', '1')->where('ResponseCode', '0')->orderBy('id')->limit(1000)->get();
         Log::info("Done Fetching data from post office...");
         Log::info("Processing data from post office...");
-        DB::connection('sqlsrv_postilion')->table('post_office_atm_transactions')
-            ->whereDate('DateLocal', $tranDate)
-            ->where('TranType', '1')->whereIn('ResponseCode', ['0','00'])
-            ->orderBy('id')->lazy()->each(function ($postTran) use ($batchNumber, $requestedBy) {
-
-                $solId = substr($postTran->TerminalIdPostilion, 4,3);
-                $regionObj = geRegionBySol($solId);
-                $region = $regionObj->region ?? 'No Region';
-                $status = 'Successful';
-                $this->allRecordsInsert($postTran, $batchNumber, $solId, $region, $status, $requestedBy);
-        });
+        $this->processPostOfficeData($tranDate, $batchNumber, $requestedBy);
 
         Log::info("Done Processing data from post office...");
         //Check for reversed transactions
         Log::info("Processing Reversal data from post office...");
-        DB::table('all_recon_data')->where('MessageType', '420')->orderBy('id')->chunk(100, function ($tranData) {
-            foreach ($tranData as $recon) {
-                $origDetails = getOriginalDetails($recon->TerminalIdPostilion, $recon->RetrievalReferenceNumberPostilion, $recon->StanPostilion, $recon->Pan);
-                //Log::info(json_encode($origDetails, JSON_THROW_ON_ERROR));
-                if(!empty($origDetails)){
-                    DB::table('all_recon_data')
-                        ->where('id', $origDetails->Id)
-                        ->update(['Status' => 'Reversed','IsReversed' => true, 'ReversalId' => $recon->Id, 'updated_at' => Carbon::now()]);
-
-                    DB::table('all_recon_data')
-                        ->where('id', $recon->Id)
-                        ->update(['Status' => 'Reversed','IsReversed' => true,'updated_at' => Carbon::now()]);
-
-                    ReversedEntry::create([
-                        'Pan' => $origDetails->Pan,
-                        'RequestDate' => $origDetails->RequestDate,
-                        'AccountNumber' => $origDetails->AccountNumber,
-                        'DateLocal' => $origDetails->DateLocal,
-                        'ResponseCode' => $origDetails->ResponseCode,
-                        'RetrievalReferenceNumberPostilion' => $origDetails->RetrievalReferenceNumberPostilion,
-                        'StanPostilion' => $origDetails->StanPostilion,
-                        'TranType' => $origDetails->TranType,
-                        'AmountPostilion' => $origDetails->AmountPostilion,
-                        'TerminalIdPostilion' => $origDetails->TerminalIdPostilion,
-                        'MessageType' => $origDetails->MessageType,
-                        'IssuerName' => $origDetails->IssuerName,
-                        //'TransactionType1' => $origDetails->TransactionType1,
-                        'BatchNumber' => $origDetails->BatchNumber,
-                        'SolId' => $origDetails->SolId,
-                        'Region' => $origDetails->Region,
-                        'Status' => $origDetails->Status,
-                        'TriggeredBy' => $origDetails->TriggeredBy,
-                        'IsReversed' => true,
-                        'ReversalId' => $recon->Id,
-                        'updated_at' => Carbon::now()
-                    ]);
-
-
-                }
-
-            }
-        });
+        $this->processPostOfficeReversals();
 
         Log::info("Done Processing Reversal data from post office...");
 
         Log::info("Fetching and processing data from finacle...");
-
         //Formatting finacle dates
         $startDate = Carbon::parse($date->addDays(-5))->format('Y-m-d');
         $endDate = Carbon::parse($date->addDays(5))->format('Y-m-d');
         $entryDate = Carbon::parse($date)->format('Y-m-d');
-        DB::connection('oracle')->table('finacle_atm_transactions')
-            ->whereDate('valuedatefinacle', $entryDate)
-            ->whereBetween('trandatefinacle', [$startDate, $endDate])
-            ->orderBy('tranIdFinacle')->chunk(1000, function ($finacleData) use($batchNumber, $requestedBy) {
-                foreach ($finacleData as $fin) {
-                    //Log::info($fin->tranremarks);
-                    $tranRemarksArray = explode('/',$fin->tranremarks);
-                    //Log::info(json_encode($tranRemarksArray));
-                    $terminalId = '';
-                    $solId = '999';
-                    $terminalType = '';
-                    if(array_key_exists(0, $tranRemarksArray)){
-                        $terminalId = trim($tranRemarksArray[0]);
-                        $solId = substr($terminalId, 4, 3);
-                        $terminalType = $terminalId[0];
-                    }
-                    $stan = '';
-                    if(array_key_exists(1, $tranRemarksArray)){
-                        $stan =  trim($tranRemarksArray[1]);
-                    }
-
-                    $rrn = '';
-                    if(array_key_exists(1, $tranRemarksArray)){
-                        $rrn = str_pad(trim($tranRemarksArray[2]), 9, '0', STR_PAD_RIGHT);
-                    }
-
-
-                    //Log::info("$rrn $stan $solId");
-                    if($this->finacleDataCheck( $rrn,  $stan,  $terminalId,  $batchNumber,  $fin)){
-                        Log::info("Reversed Finacle Txn $rrn $stan $terminalId");
-                        DB::table('finacle_data')
-                            ->where('RetrievalReferenceNumberFinacle', $rrn)
-                            ->where('StanFinacle', $stan)
-                            ->where('TerminalIdFinacle', $terminalId)
-                            ->where('AmountFinacle', $fin->amountfinacle)
-                            ->where('ValueDateFinacle', $fin->valuedatefinacle)
-                            ->where('BatchNumber', $batchNumber)
-                            ->where('TranDateFinacle', $fin->trandatefinacle)
-                            ->where('PanFinacle', $fin->panfinacle)
-
-                            ->update(
-                                [
-                                    'Reversed' => true,
-                                    'Status' => 'Reversed',
-                                    'updated_at' => Carbon::now()
-                                ]
-                            );
-                    }else{
-                        //Todo Insert into Settlement Entries Table
-                        $this->insertFinacleData($batchNumber, $fin, $stan, $solId, $rrn, $terminalId, $requestedBy, $terminalType);
-                    }
-
-                }
-            });
+        $this->processFinacleData($entryDate, $startDate, $endDate, $batchNumber, $requestedBy);
 
         DB::table('finacle_data')
             ->where('BatchNumber', $batchNumber)
@@ -200,31 +85,18 @@ class ReconciliationService implements IReconciliationService
 
             }
         });
-        Log::info("Done Processing data from post office...");
+        Log::info("Done Processing reconciled, reversed and settlement transactions...");
 
         Log::info("Processing Unimpacted transactions...");
-        DB::table('all_recon_data')->where('MessageType', '200')->where('IsReversed', false)->where('Status', 'Successful')->orderBy('id')->chunk(100, function ($tranData) {
-            foreach ($tranData as $recon) {
-                      $this->insertUnImpactedData($recon);
-
-                DB::table('all_recon_data')
-                    ->where('Id', $recon->Id)
-                    //->where('Pan', $fin->panfinacle)
-                    ->update(
-                        [
-                            'Status' => 'UnImpacted',
-                            'updated_at' => Carbon::now()
-                        ]
-                    );
-
-            }
-        });/**/
+        $this->processUnImpacted();/**/
         Log::info("Done Processing Unimpacted transactions...");
 
         Log::info("Processing Done...");
+        Log::info("Updating Request to processed...");
 
+        updateRecon($batchNumber);
 
-
+        Log::info("Done Updating Request to processed...");
         $this->response->batchNumber = $batchNumber;
         $this->response->isSuccessful = true;
         $this->response->responseCode = "000";
@@ -478,6 +350,166 @@ class ReconciliationService implements IReconciliationService
             'TranDateFinacle' => $fin->trandatefinacle,
         ];
         FinacleData::create($data);
+    }
+
+
+
+    /**
+     * @param string $tranDate
+     * @param $batchNumber
+     * @param $requestedBy
+     * @return void
+     */
+    private function processPostOfficeData(string $tranDate, $batchNumber, $requestedBy): void
+    {
+        DB::connection('sqlsrv_postilion')->table('post_office_atm_transactions')
+            ->whereDate('DateLocal', $tranDate)
+            ->where('TranType', '1')->whereIn('ResponseCode', ['0', '00'])
+            ->orderBy('id')->lazy()->each(function ($postTran) use ($batchNumber, $requestedBy) {
+
+                $solId = substr($postTran->TerminalIdPostilion, 4, 3);
+                $regionObj = geRegionBySol($solId);
+                $region = $regionObj->region ?? 'No Region';
+                $status = 'Successful';
+                $this->allRecordsInsert($postTran, $batchNumber, $solId, $region, $status, $requestedBy);
+            });
+    }
+
+    /**
+     * @return void
+     */
+    private function processPostOfficeReversals(): void
+    {
+        DB::table('all_recon_data')->where('MessageType', '420')->orderBy('id')->chunk(100, function ($tranData) {
+            foreach ($tranData as $recon) {
+                $origDetails = getOriginalDetails($recon->TerminalIdPostilion, $recon->RetrievalReferenceNumberPostilion, $recon->StanPostilion, $recon->Pan);
+                //Log::info(json_encode($origDetails, JSON_THROW_ON_ERROR));
+                if (!empty($origDetails)) {
+                    DB::table('all_recon_data')
+                        ->where('id', $origDetails->Id)
+                        ->update(['Status' => 'Reversed', 'IsReversed' => true, 'ReversalId' => $recon->Id, 'updated_at' => Carbon::now()]);
+
+                    DB::table('all_recon_data')
+                        ->where('id', $recon->Id)
+                        ->update(['Status' => 'Reversed', 'IsReversed' => true, 'updated_at' => Carbon::now()]);
+
+                    ReversedEntry::create([
+                        'Pan' => $origDetails->Pan,
+                        'RequestDate' => $origDetails->RequestDate,
+                        'AccountNumber' => $origDetails->AccountNumber,
+                        'DateLocal' => $origDetails->DateLocal,
+                        'ResponseCode' => $origDetails->ResponseCode,
+                        'RetrievalReferenceNumberPostilion' => $origDetails->RetrievalReferenceNumberPostilion,
+                        'StanPostilion' => $origDetails->StanPostilion,
+                        'TranType' => $origDetails->TranType,
+                        'AmountPostilion' => $origDetails->AmountPostilion,
+                        'TerminalIdPostilion' => $origDetails->TerminalIdPostilion,
+                        'MessageType' => $origDetails->MessageType,
+                        'IssuerName' => $origDetails->IssuerName,
+                        //'TransactionType1' => $origDetails->TransactionType1,
+                        'BatchNumber' => $origDetails->BatchNumber,
+                        'SolId' => $origDetails->SolId,
+                        'Region' => $origDetails->Region,
+                        'Status' => $origDetails->Status,
+                        'TriggeredBy' => $origDetails->TriggeredBy,
+                        'IsReversed' => true,
+                        'ReversalId' => $recon->Id,
+                        'updated_at' => Carbon::now()
+                    ]);
+
+
+                }
+
+            }
+        });
+    }
+
+    /**
+     * @param string $entryDate
+     * @param string $startDate
+     * @param string $endDate
+     * @param $batchNumber
+     * @param $requestedBy
+     * @return void
+     */
+    private function processFinacleData(string $entryDate, string $startDate, string $endDate, $batchNumber, $requestedBy): void
+    {
+        DB::connection('oracle')->table('finacle_atm_transactions')
+            ->whereDate('valuedatefinacle', $entryDate)
+            ->whereBetween('trandatefinacle', [$startDate, $endDate])
+            ->orderBy('tranIdFinacle')->chunk(1000, function ($finacleData) use ($batchNumber, $requestedBy) {
+                foreach ($finacleData as $fin) {
+                    //Log::info($fin->tranremarks);
+                    $tranRemarksArray = explode('/', $fin->tranremarks);
+                    //Log::info(json_encode($tranRemarksArray));
+                    $terminalId = '';
+                    $solId = '999';
+                    $terminalType = '';
+                    if (array_key_exists(0, $tranRemarksArray)) {
+                        $terminalId = trim($tranRemarksArray[0]);
+                        $solId = substr($terminalId, 4, 3);
+                        $terminalType = $terminalId[0];
+                    }
+                    $stan = '';
+                    if (array_key_exists(1, $tranRemarksArray)) {
+                        $stan = trim($tranRemarksArray[1]);
+                    }
+
+                    $rrn = '';
+                    if (array_key_exists(1, $tranRemarksArray)) {
+                        $rrn = str_pad(trim($tranRemarksArray[2]), 9, '0', STR_PAD_RIGHT);
+                    }
+
+
+                    //Log::info("$rrn $stan $solId");
+                    if ($this->finacleDataCheck($rrn, $stan, $terminalId, $batchNumber, $fin)) {
+                        Log::info("Reversed Finacle Txn $rrn $stan $terminalId");
+                        DB::table('finacle_data')
+                            ->where('RetrievalReferenceNumberFinacle', $rrn)
+                            ->where('StanFinacle', $stan)
+                            ->where('TerminalIdFinacle', $terminalId)
+                            ->where('AmountFinacle', $fin->amountfinacle)
+                            ->where('ValueDateFinacle', $fin->valuedatefinacle)
+                            ->where('BatchNumber', $batchNumber)
+                            ->where('TranDateFinacle', $fin->trandatefinacle)
+                            ->where('PanFinacle', $fin->panfinacle)
+                            ->update(
+                                [
+                                    'Reversed' => true,
+                                    'Status' => 'Reversed',
+                                    'updated_at' => Carbon::now()
+                                ]
+                            );
+                    } else {
+                        //Todo Insert into Settlement Entries Table
+                        $this->insertFinacleData($batchNumber, $fin, $stan, $solId, $rrn, $terminalId, $requestedBy, $terminalType);
+                    }
+
+                }
+            });
+    }
+
+    /**
+     * @return void
+     */
+    private function processUnImpacted(): void
+    {
+        DB::table('all_recon_data')->where('MessageType', '200')->where('IsReversed', false)->where('Status', 'Successful')->orderBy('id')->chunk(100, function ($tranData) {
+            foreach ($tranData as $recon) {
+                $this->insertUnImpactedData($recon);
+
+                DB::table('all_recon_data')
+                    ->where('Id', $recon->Id)
+                    //->where('Pan', $fin->panfinacle)
+                    ->update(
+                        [
+                            'Status' => 'UnImpacted',
+                            'updated_at' => Carbon::now()
+                        ]
+                    );
+
+            }
+        });
     }
 
 

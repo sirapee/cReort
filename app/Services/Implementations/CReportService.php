@@ -34,7 +34,7 @@ class CReportService implements ICReportService
         $region = '';
 
         //Todo check if recon has already been done
-        if(checkDuplicateRecon($coverage, $tranDate, $solId , $region)){
+        if(checkDuplicateRecon($coverage, $tranDate, 'FEP', $solId , $region)){
             $this->response->responseCode = "119";
             $this->response->responseMessage = "Reconciliation already Initiated, Check the report";
             return $this->response;

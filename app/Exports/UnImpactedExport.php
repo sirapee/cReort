@@ -6,8 +6,9 @@ use App\Models\UnImpactedEntry;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithTitle;
 
-class UnImpactedExport implements FromQuery , WithHeadings
+class UnImpactedExport implements FromQuery , WithHeadings, WithTitle
 {
     use Exportable;
     public function __construct(string $tranType = '', $tranDate = '')
@@ -49,6 +50,11 @@ class UnImpactedExport implements FromQuery , WithHeadings
             'Picked' ,'Posted' ,'ApprovedForPosting' ,'ApprovedForPostingBy' ,'ApprovedDate' ,'PostingResponseCode' ,'PostingResponseMessage' ,
             'PostingTranId' ,'PostingDate' ,'CreatedAt' ,'Updated At'
         ];
+    }
+
+    public function title(): string
+    {
+        return 'UnImpactedFor_'.$this->tranDate;
     }
 }
 

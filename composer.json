@@ -6,6 +6,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.1",
+        "ext-curl": "*",
         "ext-zip": "*",
         "adldap2/adldap2": "*",
         "adldap2/adldap2-laravel": "^6.1",
@@ -17,6 +18,7 @@
         "laravel/sanctum": "^2.14.1",
         "laravel/tinker": "^2.7",
         "maatwebsite/excel": "^3.1",
+        "php-http/curl-client": "^2.2",
         "psr/simple-cache": "1.0",
         "tymon/jwt-auth": "*",
         "yajra/laravel-oci8": "9"
