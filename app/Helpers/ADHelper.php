@@ -23,9 +23,9 @@ class ADHelper
 {
     public function ADLogin($request)
     {
-        $check = strpos($request->username, '@hbng.com');
+        $check = strpos($request->username, '@me.com');
         if ($check !== false) {
-            $username = str_replace('@hbng.com', '', $request->username);
+            $username = str_replace('@me.com', '', $request->username);
             $request->merge(['username' => $username]);
         }
         $username = $request->input('username');
@@ -66,7 +66,7 @@ class ADHelper
     public function TwoFactor ($request){
 
         try {
-            $this->validateToken('IU1311003','staff','0019882900ww','7tnGtLgEeEIMVOt4DjlQk3od035ZCWmtLnqcywJKm+I');
+            $this->validateToken('IU1wwwwwww','staff','0019882900ww','7tnGtLgEeEIMVOt4DjlQk3od035ZCWmtLnqcywJKm+I');
             return true;
         }catch (\Exception $exception){
             Log::info($exception->getMessage());
@@ -75,7 +75,7 @@ class ADHelper
     }
 
     private function validateToken($userId,$tokenGroup,$tokenPin,$authCode){
-        $client = new nusoap_client('http://10.0.33.62/Test_EntrustBridge/API.svc?singleWsdl', 'wsdl');
+        $client = new nusoap_client('http://10.44.44.62/Test_EntrustBridge/API.svc?singleWsdl', 'wsdl');
         $client->soap_defencoding='utf-8';
         $err = $client->getError();
         if ($err) {
